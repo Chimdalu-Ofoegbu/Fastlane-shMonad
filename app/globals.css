@@ -1,6 +1,29 @@
 @import "tailwindcss";
 
-:root {
+/* LIGHT (default) */
+:root,
+:root[data-theme="light"] {
+  --bg: oklch(98% 0.006 85);
+  --bg-1: oklch(95% 0.008 85);
+  --bg-2: oklch(92% 0.010 85);
+  --ink: oklch(16% 0.012 60);
+  --ink-2: oklch(32% 0.012 65);
+  --ink-3: oklch(48% 0.012 70);
+  --ink-4: oklch(64% 0.010 75);
+  --rule: oklch(82% 0.008 80);
+  --rule-2: oklch(74% 0.008 75);
+  --signal: #6105FF;
+  --signal-2: #4A03C2;
+  --signal-dim: #C9B8FF;
+  --good: oklch(45% 0.16 155);
+  --ink-rgb: 28 22 18;
+  --signal-rgb: 97 5 255;
+  --logo-invert: 1;
+  --grain-opacity: 0.32;
+}
+
+/* DARK */
+:root[data-theme="dark"] {
   --bg: oklch(14% 0.012 60);
   --bg-1: oklch(17% 0.014 60);
   --bg-2: oklch(20% 0.014 60);
@@ -14,6 +37,10 @@
   --signal-2: #4A03C2;
   --signal-dim: #2A0270;
   --good: oklch(72% 0.13 155);
+  --ink-rgb: 232 224 210;
+  --signal-rgb: 97 5 255;
+  --logo-invert: 0;
+  --grain-opacity: 0.5;
 }
 
 @theme inline {
@@ -36,6 +63,32 @@ html,
 body {
   background: var(--bg);
   color: var(--ink);
+}
+
+html,
+body,
+*,
+*::before,
+*::after {
+  transition: background-color 220ms ease, border-color 220ms ease,
+    color 220ms ease;
+}
+
+/* Logo SVG is authored in white; invert for light mode via filter */
+.fl-logo {
+  filter: invert(var(--logo-invert));
+}
+
+/* Theme toggle hover affordance */
+.theme-toggle:hover {
+  color: var(--ink);
+  border-color: var(--signal);
+}
+
+/* shMonad banner CTA hover */
+.banner-cta:hover {
+  background: #f0e6ff !important;
+  transform: translateY(-1px);
 }
 
 body {
@@ -70,7 +123,7 @@ body {
   z-index: 60;
   background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
   mix-blend-mode: overlay;
-  opacity: 0.5;
+  opacity: var(--grain-opacity);
 }
 
 /* Rule helpers */
@@ -131,7 +184,7 @@ body {
 .cta-signal {
   background: var(--signal);
   border-color: var(--signal);
-  color: var(--ink);
+  color: #fff;
 }
 .cta-signal::before { background: var(--ink); }
 .cta-signal:hover { color: var(--bg); }
@@ -329,6 +382,44 @@ body {
 }
 .marquee-wrap {
   mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.marquee-wrap:hover .marquee,
+.marquee-wrap:focus-within .marquee {
+  animation-play-state: paused;
+}
+
+/* Partner link inside marquee — subtle on rest, sharper on hover */
+.partner-link {
+  color: var(--ink-2);
+  position: relative;
+  display: inline-block;
+  padding: 4px 2px;
+  transition: color 220ms ease, transform 220ms cubic-bezier(0.2, 0.7, 0, 1),
+    opacity 220ms ease;
+  opacity: 0.72;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.marquee-wrap:hover .partner-link { opacity: 0.5; }
+.marquee-wrap .partner-link:hover {
+  color: var(--signal);
+  opacity: 1;
+  transform: translateY(-2px);
+}
+.marquee-wrap .partner-link::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -2px;
+  height: 1px;
+  background: var(--signal);
+  transform: scaleX(0);
+  transform-origin: 50% 50%;
+  transition: transform 320ms cubic-bezier(0.2, 0.7, 0, 1);
+}
+.marquee-wrap .partner-link:hover::after {
+  transform: scaleX(1);
 }
 
 /* Architecture lines */

@@ -14,7 +14,7 @@ export default function CTA() {
           >
             Make ordering
             <br />
-            <em>a first-class</em>
+            <em style={{ fontStyle: "normal" }}>a first-class</em>
             <br />
             primitive.
           </h2>

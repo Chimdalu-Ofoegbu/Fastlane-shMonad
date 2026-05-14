@@ -18,7 +18,9 @@ export default function Products() {
             </div>
           </div>
           <h2 className="serif-disp text-[clamp(36px,4.6vw,72px)] text-balance">
-            Four primitives. <em>One execution surface.</em>
+            Four primitives.
+            <br />
+            <em style={{ fontStyle: "normal" }}>One execution surface.</em>
           </h2>
         </div>
 

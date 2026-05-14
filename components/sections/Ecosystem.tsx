@@ -1,15 +1,35 @@
+type Partner = { name: string; href: string; cls: string };
+
+const PARTNERS: Partner[] = [
+  { name: "Kuru", href: "#", cls: "serif-disp text-[40px]" },
+  { name: "aPriori", href: "#", cls: "font-mono text-[28px] tracking-tighter" },
+  { name: "Curvance", href: "#", cls: "serif-disp italic text-[40px]" },
+  { name: "0x.search", href: "#", cls: "font-mono text-[28px]" },
+  { name: "Caddy", href: "#", cls: "serif-disp text-[40px]" },
+  { name: "MONOPLEX", href: "#", cls: "font-mono text-[28px] tracking-widest" },
+  { name: "Pyth", href: "#", cls: "serif-disp italic text-[40px]" },
+  { name: "layerN", href: "#", cls: "font-mono text-[28px]" },
+  { name: "Wormhole", href: "#", cls: "serif-disp text-[40px]" },
+];
+
 export default function Ecosystem() {
-  const marqueeItems = (
-    <div className="flex items-center gap-16 px-8">
-      <span className="serif-disp text-[40px]">Kuru</span>
-      <span className="font-mono text-[28px] tracking-tighter">aPriori</span>
-      <span className="serif-disp italic text-[40px]">Curvance</span>
-      <span className="font-mono text-[28px]">0x.search</span>
-      <span className="serif-disp text-[40px]">Caddy</span>
-      <span className="font-mono text-[28px] tracking-widest">MONOPLEX</span>
-      <span className="serif-disp italic text-[40px]">Pyth</span>
-      <span className="font-mono text-[28px]">layerN</span>
-      <span className="serif-disp text-[40px]">Wormhole</span>
+  const renderRow = (ariaHidden = false) => (
+    <div
+      className="flex items-center gap-16 px-8"
+      aria-hidden={ariaHidden || undefined}
+    >
+      {PARTNERS.map((p, i) => (
+        <a
+          key={`${p.name}-${i}`}
+          href={p.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`partner-link ${p.cls}`}
+          tabIndex={ariaHidden ? -1 : 0}
+        >
+          {p.name}
+        </a>
+      ))}
     </div>
   );
 
@@ -31,15 +51,23 @@ export default function Ecosystem() {
               / who.builds.on.fastlane
             </div>
           </div>
-          <h2 className="serif-disp text-[clamp(36px,4.6vw,72px)] text-balance">
-            The teams routing flow through Fastlane.
-          </h2>
+          <div>
+            <h2 className="serif-disp text-[clamp(36px,4.6vw,72px)] text-balance">
+              Trusted by leading Apps &amp; Builders
+            </h2>
+            <p
+              className="mt-5 text-[16px] text-pretty"
+              style={{ color: "var(--ink-3)", lineHeight: 1.55, maxWidth: "60ch" }}
+            >
+              The infrastructure trusted by the apps you already use.
+            </p>
+          </div>
         </div>
 
         <div className="marquee-wrap mt-16 overflow-hidden">
           <div className="marquee items-center">
-            {marqueeItems}
-            <div aria-hidden="true">{marqueeItems}</div>
+            {renderRow()}
+            {renderRow(true)}
           </div>
         </div>
 

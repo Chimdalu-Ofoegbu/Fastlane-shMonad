@@ -17,19 +17,21 @@ export default function Thesis() {
             </div>
           </div>
           <h2 className="serif-disp text-[clamp(36px,4.6vw,72px)] text-balance">
-            A protocol-level <em>marketplace</em> for the order in which Monad
+            A protocol-level <em style={{ fontStyle: "normal" }}>marketplace</em> for the order in which Monad
             blocks are built.
           </h2>
         </div>
 
         <div className="grid grid-cols-12 gap-10 mt-16">
-          <div className="col-span-12 md:col-span-5">
-            <p className="pullquote text-pretty">
-              On every chain, value leaks to whoever controls ordering.{" "}
-              <em>Fastlane makes ordering a public, sealed market</em> — priced
-              by searchers, settled deterministically, redistributed to the
-              validators who secure it.
-            </p>
+          <div className="col-span-12 md:col-span-5 flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/shmon-side-hollow.webp"
+              alt="shMonad side hollow"
+              className="block w-full h-auto select-none"
+              style={{ maxWidth: 460 }}
+              draggable={false}
+            />
           </div>
           <div className="col-span-12 md:col-span-6 md:col-start-7">
             <div

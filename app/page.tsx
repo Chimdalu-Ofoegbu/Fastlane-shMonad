@@ -2,8 +2,8 @@ import Nav from "@/components/sections/Nav";
 import Hero from "@/components/sections/Hero";
 import Thesis from "@/components/sections/Thesis";
 import Products from "@/components/sections/Products";
-import Architecture from "@/components/sections/Architecture";
 import Ecosystem from "@/components/sections/Ecosystem";
+import ShmonadBanner from "@/components/sections/ShmonadBanner";
 import CTA from "@/components/sections/CTA";
 import Footer from "@/components/sections/Footer";
 import LiveTickers from "@/components/client/LiveTickers";
@@ -16,8 +16,8 @@ export default function Home() {
       <Hero />
       <Thesis />
       <Products />
-      <Architecture />
       <Ecosystem />
+      <ShmonadBanner />
       <CTA />
       <Footer />
       <LiveTickers />

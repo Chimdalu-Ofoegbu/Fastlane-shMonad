@@ -3,19 +3,6 @@ import MatrixCanvas from "@/components/client/MatrixCanvas";
 export default function Footer() {
   return (
     <footer data-screen-label="Footer">
-      <div
-        className="footer-canvas-wrap relative"
-        style={{ borderBottom: "1px solid var(--rule)" }}
-      >
-        <MatrixCanvas />
-        <div
-          className="absolute top-4 left-8 font-mono text-[11px] tracking-widest"
-          style={{ color: "var(--ink-4)" }}
-        >
-          FIG. 03 — RESOLVE
-        </div>
-      </div>
-
       <div className="max-w-[1320px] mx-auto px-8 py-16">
         <div className="grid grid-cols-12 gap-10">
           <div className="col-span-12 md:col-span-4">
@@ -53,55 +40,60 @@ export default function Footer() {
             </div>
           </div>
 
-          <div className="col-span-6 md:col-span-2 foot-col">
-            <h5>Products</h5>
-            <a href="#">Atlas</a>
-            <a href="#">FastBids</a>
-            <a href="#">shMonad</a>
-            <a href="#">Relay</a>
+          <div className="col-span-12 md:col-span-8 grid grid-cols-2 md:grid-cols-5 gap-10">
+            <div className="foot-col">
+              <h5>Products</h5>
+              <a href="#">Atlas</a>
+              <a href="#">FastBids</a>
+              <a href="#">shMonad</a>
+              <a href="#">Relay</a>
+            </div>
+            <div className="foot-col">
+              <h5>Developers</h5>
+              <a href="#">Documentation</a>
+              <a href="#">SDK</a>
+              <a href="#">Status</a>
+              <a href="#">Changelog</a>
+            </div>
+            <div className="foot-col">
+              <h5>Network</h5>
+              <a href="#">Validators</a>
+              <a href="#">Searchers</a>
+              <a href="#">Auctions</a>
+              <a href="#">Research</a>
+            </div>
+            <div className="foot-col">
+              <h5>Company</h5>
+              <a href="#">About</a>
+              <a href="#">Blog</a>
+              <a href="#">Careers</a>
+              <a href="#">Press kit</a>
+            </div>
+            <div className="foot-col">
+              <h5>Socials</h5>
+              <a href="#">Twitter / X</a>
+              <a href="#">GitHub</a>
+              <a href="#">Discord</a>
+              <a href="#">Mirror</a>
+            </div>
           </div>
-          <div className="col-span-6 md:col-span-2 foot-col">
-            <h5>Developers</h5>
-            <a href="#">Documentation</a>
-            <a href="#">SDK</a>
-            <a href="#">Status</a>
-            <a href="#">Changelog</a>
-          </div>
-          <div className="col-span-6 md:col-span-2 foot-col">
-            <h5>Network</h5>
-            <a href="#">Validators</a>
-            <a href="#">Searchers</a>
-            <a href="#">Auctions</a>
-            <a href="#">Research</a>
-          </div>
-          <div className="col-span-6 md:col-span-2 foot-col">
-            <h5>Company</h5>
-            <a href="#">About</a>
-            <a href="#">Blog</a>
-            <a href="#">Careers</a>
-            <a href="#">Press kit</a>
+        </div>
+
+        <div className="footer-canvas-wrap relative mt-16">
+          <MatrixCanvas />
+          <div
+            className="absolute top-4 left-0 font-mono text-[11px] tracking-widest"
+            style={{ color: "var(--ink-4)" }}
+          >
+            FIG. 03 — RESOLVE
           </div>
         </div>
 
         <div
-          className="mt-16 pt-6 flex items-center justify-between text-[12px] font-mono flex-wrap gap-4"
+          className="mt-8 pt-6 flex items-center justify-between text-[12px] font-mono flex-wrap gap-4"
           style={{ borderTop: "1px solid var(--rule)", color: "var(--ink-3)" }}
         >
           <div>© 2026 FASTLANE LABS · DELAWARE · MEV ON MONAD</div>
-          <div className="flex items-center gap-6">
-            <a href="#" style={{ color: "inherit" }}>
-              Twitter / X
-            </a>
-            <a href="#" style={{ color: "inherit" }}>
-              GitHub
-            </a>
-            <a href="#" style={{ color: "inherit" }}>
-              Discord
-            </a>
-            <a href="#" style={{ color: "inherit" }}>
-              Mirror
-            </a>
-          </div>
           <div>
             v.2026.05 · BUILD <span className="num">a18c4f2</span>
           </div>

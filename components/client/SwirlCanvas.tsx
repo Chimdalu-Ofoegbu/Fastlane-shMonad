@@ -14,6 +14,22 @@ export default function SwirlCanvas() {
     const DPR = Math.min(window.devicePixelRatio || 1, 2);
     let w = 0;
     let h = 0;
+    let inkRgb = "232,224,210";
+    let signalRgb = "97,5,255";
+
+    function refreshColors() {
+      const cs = getComputedStyle(document.documentElement);
+      const ink = cs.getPropertyValue("--ink-rgb").trim();
+      const sig = cs.getPropertyValue("--signal-rgb").trim();
+      if (ink) inkRgb = ink.split(/\s+/).join(",");
+      if (sig) signalRgb = sig.split(/\s+/).join(",");
+    }
+    refreshColors();
+    const themeObserver = new MutationObserver(refreshColors);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
     type Particle = {
       r: number;
       theta: number;
@@ -66,7 +82,7 @@ export default function SwirlCanvas() {
       const cx = w * 0.72;
       const cy = h * 0.58;
       const g = ctx.createRadialGradient(cx, cy, 20, cx, cy, Math.max(w, h) * 0.7);
-      g.addColorStop(0, "rgba(97,5,255,0.06)");
+      g.addColorStop(0, `rgba(${signalRgb},0.06)`);
       g.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
@@ -81,14 +97,14 @@ export default function SwirlCanvas() {
         ctx.beginPath();
         ctx.arc(x, y, p.size, 0, Math.PI * 2);
         if (p.hue === "amber") {
-          ctx.fillStyle = `rgba(97,5,255,${p.alpha})`;
+          ctx.fillStyle = `rgba(${signalRgb},${p.alpha})`;
         } else {
-          ctx.fillStyle = `rgba(232,224,210,${p.alpha * 0.55})`;
+          ctx.fillStyle = `rgba(${inkRgb},${p.alpha * 0.55})`;
         }
         ctx.fill();
       }
 
-      ctx.strokeStyle = "rgba(232,224,210,0.06)";
+      ctx.strokeStyle = `rgba(${inkRgb},0.06)`;
       ctx.lineWidth = 1;
       for (let i = 0; i < 8; i++) {
         const a = particles[(i * 23) % PARTICLE_COUNT];
@@ -120,6 +136,7 @@ export default function SwirlCanvas() {
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", onResize);
+      themeObserver.disconnect();
     };
   }, []);
 

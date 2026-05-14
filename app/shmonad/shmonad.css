@@ -1,0 +1,262 @@
+/* ─────────────────────────────────────────────
+   shMonad page styles
+   Ported from shMonad Redesign.html (Claude Design export).
+   Scoped via .shmonad-root so it doesn't leak.
+   ───────────────────────────────────────────── */
+
+/* DARK (default) — original design palette with lime swapped for purple */
+.shmonad-root {
+  --sh-ink:   #0a0a09;
+  --sh-ink2:  #121210;
+  --sh-ink3:  #1a1a17;
+  --sh-ink4:  #222220;
+  --sh-bone:  #f5f4ee;
+  --sh-bone2: #e8e6dd;
+  --sh-mute:  #76746b;
+  --sh-mute2: #9e9c91;
+  --sh-hair:  #1f1e1a;
+  --sh-hair2: #2a2924;
+  --sh-lime:  #6105FF;
+  --sh-lime2: #4A03C2;
+  --sh-red:   #ff6b4a;
+  --sh-lime-fg: #ffffff;
+
+  background: var(--sh-ink);
+  color: var(--sh-bone);
+  font-family: var(--font-geist), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* LIGHT — mirror of dark, ink/bone swapped, hairlines softened */
+:root[data-theme="light"] .shmonad-root {
+  --sh-ink:   #f5f4ee;
+  --sh-ink2:  #ecebe4;
+  --sh-ink3:  #e2e1da;
+  --sh-ink4:  #d8d7d0;
+  --sh-bone:  #0a0a09;
+  --sh-bone2: #1c1c19;
+  --sh-mute:  #76746b;
+  --sh-mute2: #58564f;
+  --sh-hair:  #d8d6cd;
+  --sh-hair2: #c4c2b8;
+  --sh-lime:  #6105FF;
+  --sh-lime2: #4A03C2;
+  --sh-red:   #e0492a;
+  --sh-lime-fg: #ffffff;
+}
+
+.shmonad-root ::selection {
+  background: var(--sh-lime);
+  color: var(--sh-ink);
+}
+
+/* Backgrounds */
+.shmonad-root .bg-ink   { background-color: var(--sh-ink); }
+.shmonad-root .bg-ink2  { background-color: var(--sh-ink2); }
+.shmonad-root .bg-ink3  { background-color: var(--sh-ink3); }
+.shmonad-root .bg-ink4  { background-color: var(--sh-ink4); }
+.shmonad-root .bg-bone  { background-color: var(--sh-bone); }
+.shmonad-root .bg-bone2 { background-color: var(--sh-bone2); }
+.shmonad-root .bg-lime  { background-color: var(--sh-lime); }
+.shmonad-root .bg-lime2 { background-color: var(--sh-lime2); }
+.shmonad-root .bg-hair  { background-color: var(--sh-hair); }
+.shmonad-root .bg-hair2 { background-color: var(--sh-hair2); }
+.shmonad-root .bg-mute  { background-color: var(--sh-mute); }
+.shmonad-root .bg-mute2 { background-color: var(--sh-mute2); }
+.shmonad-root .bg-red   { background-color: var(--sh-red); }
+.shmonad-root .bg-bone\/80 { background-color: color-mix(in srgb, var(--sh-bone) 80%, transparent); }
+.shmonad-root .bg-bone\/70 { background-color: color-mix(in srgb, var(--sh-bone) 70%, transparent); }
+.shmonad-root .bg-bone\/30 { background-color: color-mix(in srgb, var(--sh-bone) 30%, transparent); }
+.shmonad-root .bg-ink\/90  { background-color: color-mix(in srgb, var(--sh-ink) 90%, transparent); }
+
+/* Foreground / text */
+.shmonad-root .text-ink   { color: var(--sh-ink); }
+.shmonad-root .text-bone  { color: var(--sh-bone); }
+.shmonad-root .text-bone2 { color: var(--sh-bone2); }
+.shmonad-root .text-mute  { color: var(--sh-mute); }
+.shmonad-root .text-mute2 { color: var(--sh-mute2); }
+.shmonad-root .text-lime  { color: var(--sh-lime); }
+.shmonad-root .text-red   { color: var(--sh-red); }
+
+/* Borders */
+.shmonad-root .border-bone  { border-color: var(--sh-bone); }
+.shmonad-root .border-lime  { border-color: var(--sh-lime); }
+.shmonad-root .border-hair  { border-color: var(--sh-hair); }
+.shmonad-root .border-hair2 { border-color: var(--sh-hair2); }
+.shmonad-root .border-red   { border-color: var(--sh-red); }
+.shmonad-root .border-mute  { border-color: var(--sh-mute); }
+
+.shmonad-root .accent-lime  { accent-color: var(--sh-lime); }
+
+/* Hairlines */
+.shmonad-root .hairline-b { border-bottom: 1px solid var(--sh-hair); }
+.shmonad-root .hairline-t { border-top: 1px solid var(--sh-hair); }
+.shmonad-root .hairline-r { border-right: 1px solid var(--sh-hair); }
+.shmonad-root .hairline-l { border-left: 1px solid var(--sh-hair); }
+.shmonad-root .hair  { border-color: var(--sh-hair); }
+.shmonad-root .hair2 { border-color: var(--sh-hair2); }
+
+/* Typography utilities */
+.shmonad-root .serif {
+  font-family: var(--font-instrument-serif), "Instrument Serif", serif;
+  font-weight: 400;
+}
+.shmonad-root .mono {
+  font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+}
+.shmonad-root .mono-up {
+  font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+.shmonad-root .tnum { font-variant-numeric: tabular-nums; }
+.shmonad-root .font-sans {
+  font-family: var(--font-geist), system-ui, sans-serif;
+}
+
+/* Dot grid background (unused for now but defined for parity) */
+.shmonad-root .dotgrid {
+  background-image: radial-gradient(circle, var(--sh-hair) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* CTA: text-slide on hover + fill */
+.shmonad-root .cta-fl {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: color 0.35s cubic-bezier(0.6, 0.2, 0.2, 1);
+}
+.shmonad-root .cta-fl .fl-fill {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 0;
+  background: var(--sh-lime);
+  transition: height 0.35s cubic-bezier(0.6, 0.2, 0.2, 1);
+  z-index: -1;
+}
+.shmonad-root .cta-fl:hover .fl-fill { height: 100%; }
+.shmonad-root .cta-fl:hover { color: var(--sh-ink); }
+.shmonad-root .cta-fl .fl-track {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  height: 1em;
+  overflow: hidden;
+  line-height: 1;
+}
+.shmonad-root .cta-fl .fl-track > span {
+  display: block;
+  transition: transform 0.35s cubic-bezier(0.6, 0.2, 0.2, 1);
+}
+.shmonad-root .cta-fl:hover .fl-track > span {
+  transform: translateY(-100%);
+}
+
+/* Live pulse dot */
+@keyframes sh-pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.85); }
+}
+.shmonad-root .live-dot { animation: sh-pulse-dot 1.6s ease-in-out infinite; }
+
+/* Nav links */
+.shmonad-root .nav-link {
+  position: relative;
+  padding-bottom: 4px;
+}
+.shmonad-root .nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: transparent;
+  transition: background 0.25s ease;
+}
+.shmonad-root .nav-link:hover { color: var(--sh-bone); }
+.shmonad-root .nav-link.active { color: var(--sh-bone); }
+.shmonad-root .nav-link.active::after { background: var(--sh-lime); }
+
+/* Marquee (defined for parity, not currently used in page) */
+@keyframes sh-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.shmonad-root .marquee-track { animation: sh-marquee 80s linear infinite; }
+
+/* Page fade-in */
+.shmonad-root .page { display: none; }
+.shmonad-root .page.active {
+  display: block;
+  animation: sh-pageIn 0.35s ease both;
+}
+@keyframes sh-pageIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Range slider */
+.shmonad-root input[type="range"].lime-slider {
+  -webkit-appearance: none;
+  height: 2px;
+  background: var(--sh-hair2);
+  outline: none;
+}
+.shmonad-root input[type="range"].lime-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--sh-lime);
+  cursor: pointer;
+  border-radius: 0;
+}
+.shmonad-root input[type="range"].lime-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--sh-lime);
+  cursor: pointer;
+  border: 0;
+  border-radius: 0;
+}
+
+/* Scrollbar hide */
+.shmonad-root .noscroll::-webkit-scrollbar { display: none; }
+.shmonad-root .noscroll { scrollbar-width: none; }
+
+/* ThemeToggle visual override when rendered inside shMonad */
+.shmonad-root .theme-toggle {
+  border-color: var(--sh-hair2) !important;
+  color: var(--sh-mute2) !important;
+  background: transparent !important;
+}
+.shmonad-root .theme-toggle:hover {
+  color: var(--sh-bone) !important;
+  border-color: var(--sh-lime) !important;
+}
+
+.shmonad-root pre { white-space: pre; }
+
+/* The global universal transition (in globals.css) gets stuck on shMonad's
+   var(--sh-*) chain when the global data-theme flips. Reset transitions
+   inside the shMonad scope so theme swaps render instantly. Re-enable
+   targeted transitions on individual elements that need them. */
+.shmonad-root,
+.shmonad-root *,
+.shmonad-root *::before,
+.shmonad-root *::after {
+  transition: none;
+}
+/* Keep the CTA inverse-fill animation working */
+.shmonad-root .cta-fl { transition: color 0.35s cubic-bezier(0.6, 0.2, 0.2, 1); }
+.shmonad-root .cta-fl .fl-fill { transition: height 0.35s cubic-bezier(0.6, 0.2, 0.2, 1); }
+.shmonad-root .cta-fl .fl-track > span { transition: transform 0.35s cubic-bezier(0.6, 0.2, 0.2, 1); }
+.shmonad-root .nav-link::after { transition: background 0.25s ease; }
+.shmonad-root .live-dot { animation: sh-pulse-dot 1.6s ease-in-out infinite; }
+
+/* The grain overlay from the root layout interferes visually here — kill it */
+body.grain.shmonad-body::after { display: none; }
