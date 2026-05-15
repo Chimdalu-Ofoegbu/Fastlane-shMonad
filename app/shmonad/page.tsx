@@ -5,7 +5,7 @@ import ThemeToggle from "@/components/client/ThemeToggle";
 import MatrixCanvas from "@/components/client/MatrixCanvas";
 import "./shmonad.css";
 
-const SHMONAD_MATRIX_WORDS = ["STAKE", "SHMONAD"];
+const SHMONAD_MATRIX_WORDS = ["STAKE", "shMON"];
 
 type DepositToken = "MON" | "WMON";
 
@@ -20,6 +20,20 @@ export default function ShmonadPage() {
   const tokenMenuRef = useRef<HTMLDivElement | null>(null);
   const [walletConnected, setWalletConnected] = useState(false);
   const [stakeMode, setStakeMode] = useState<"stake" | "unstake">("stake");
+  // Active route — used to hide the global stats strip on certain pages
+  // (the strip should not appear on the RPC page).
+  const [activeRoute, setActiveRoute] = useState<string>(
+    typeof window !== "undefined" ? window.location.hash || "#/stake" : "#/stake"
+  );
+  // Degen Pool Details — collapsible state. Defaults to open since the
+  // copy is informational and useful to show on first visit.
+  const [degenDetailsOpen, setDegenDetailsOpen] = useState(true);
+  useEffect(() => {
+    const onHash = () => setActiveRoute(window.location.hash || "#/stake");
+    window.addEventListener("hashchange", onHash);
+    onHash();
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
 
   // When the user connects, hydrate the freshly-mounted fl-track ctaAmt spans
   // (Stake + Unstake) from the current input values so each CTA shows the
@@ -172,16 +186,32 @@ export default function ShmonadPage() {
 
     /* ─── RPC COMMIT ─── */
     const rpcInput = document.getElementById("rpcIn") as HTMLInputElement | null;
-    const rpcCta = document.getElementById("rpcCta");
     const range = document.getElementById("durRange") as HTMLInputElement | null;
     const dur = document.getElementById("durDays");
     const gas = document.getElementById("gasBudget");
+    const rateLimitVal = document.getElementById("rateLimitVal");
+    // Map slider value (7..180) → tier → rate limit per minute.
+    // Thresholds are positioned midway between the four tier labels under the
+    // slider (Builder / Pro / Infra Operator / Enterprise, spaced via
+    // justify-between over the 7..180 range).
+    function tierPerMinForDays(days: number): number {
+      if (days < 36) return 600;     // Builder · 10 req/sec
+      if (days < 94) return 1500;    // Pro · 25 req/sec
+      if (days < 152) return 3000;   // Infra Operator · 50 req/sec
+      return 6000;                   // Enterprise · 100 req/sec
+    }
     function recalcRpc() {
       if (!rpcInput) return;
       const v = parseFloat((rpcInput.value || "0").replace(/,/g, "")) || 0;
-      if (rpcCta) rpcCta.textContent = fmt(v, 2);
+      // fl-track CTA on the RPC commit form — both copies stay in sync.
+      const amt = fmt(v, 2);
+      document
+        .querySelectorAll<HTMLSpanElement>(".shmonad-root .rpcCtaAmt")
+        .forEach((el) => { el.textContent = amt; });
       const d = parseInt(range?.value || "30");
       if (dur) dur.textContent = String(d);
+      // Slider tier → rate limit per minute callout.
+      if (rateLimitVal) rateLimitVal.textContent = tierPerMinForDays(d).toLocaleString();
       const txPerShMon = 59.4;
       const txTotal = Math.round(v * txPerShMon);
       if (gas)
@@ -194,6 +224,12 @@ export default function ShmonadPage() {
     }
     rpcInput?.addEventListener("input", recalcRpc);
     range?.addEventListener("input", recalcRpc);
+    const rpcMaxBtn = document.getElementById("rpcMaxBtn");
+    const rpcBal = 2841.0091;
+    rpcMaxBtn?.addEventListener("click", () => {
+      if (rpcInput) rpcInput.value = rpcBal.toFixed(4);
+      recalcRpc();
+    });
     recalcRpc();
 
     /* ─── DEGEN ack toggle ─── */
@@ -438,22 +474,25 @@ export default function ShmonadPage() {
             </button>
           </div>
         </div>
-
-        <div className="border-t hair hidden md:block">
-          <div className="max-w-[1480px] mx-auto px-6 lg:px-8 py-4 grid grid-cols-12 items-start mono text-[15px]">
-            <div className="col-span-4 flex flex-col items-start gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>TVL</span> <span className="tnum text-bone font-bold text-[32px] leading-none">$412.8M</span></div>
-            <div className="col-span-4 hairline-l pl-6 flex flex-col items-start gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>APY</span> <span className="tnum text-bone font-bold text-[32px] leading-none">20.54%</span></div>
-            <div className="col-span-4 hairline-l pl-6 flex flex-col items-start gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>HOLDERS</span> <span className="tnum text-bone font-bold text-[32px] leading-none">2,968</span></div>
-          </div>
-        </div>
       </header>
+
+      {/* Page-level stats strip — moved out of the sticky <header> so it
+          reads as a distinct section below the nav, with breathing room
+          above and no connecting hairline. Hidden on the RPC and Degen
+          pages where the page-specific layout takes over. */}
+      <div className={`${(activeRoute.startsWith("#/rpc") || activeRoute.startsWith("#/degen")) ? "hidden" : "hidden md:block"} mt-10 lg:mt-[144px]`}>
+        <div className="max-w-[1480px] mx-auto px-6 lg:px-8 flex items-start justify-center gap-24 lg:gap-32 mono text-[15px]">
+          <div className="flex flex-col items-start gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>TVL</span> <span className="tnum text-bone font-bold text-[32px] leading-none">$412.8M</span></div>
+          <div className="flex flex-col items-start gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>APY</span> <span className="tnum text-bone font-bold text-[32px] leading-none">20.54%</span></div>
+          <div className="flex flex-col items-start gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>HOLDERS</span> <span className="tnum text-bone font-bold text-[32px] leading-none">2,968</span></div>
+        </div>
+      </div>
 
       {/* PAGE: STAKE */}
       <main id="page-stake" className="page">
         <div className="max-w-[1480px] mx-auto px-6 lg:px-8 py-10 lg:py-14">
-          <div className="grid grid-cols-12 gap-6 lg:gap-8">
-            <div className="col-span-12 lg:col-span-7">
-              <div id="stake-mod" className="border border-hair2 bg-ink">
+          <div className="max-w-[700px] mx-auto">
+            <div id="stake-mod" className="border border-hair2 bg-ink">
                 <div className="flex items-center hairline-b">
                   <button
                     type="button"
@@ -720,7 +759,7 @@ export default function ShmonadPage() {
               </div>
             </div>
 
-            <div className="col-span-12 lg:col-span-5 space-y-6">
+            <div className="mt-12 space-y-6 max-w-[700px] mx-auto">
               <div className="border border-hair2 bg-ink2">
                 <div className="hairline-b flex items-center px-5 h-[44px]">
                   <span className="mono-up text-mute">Your position</span>
@@ -747,120 +786,202 @@ export default function ShmonadPage() {
               </div>
 
             </div>
-          </div>
 
         </div>
       </main>
 
       {/* PAGE: FASTLANE RPC */}
       <main id="page-rpc" className="page">
-        <div className="max-w-[1480px] mx-auto px-6 lg:px-8 py-10 lg:py-14">
-          <div className="flex flex-wrap items-end justify-between gap-6 mb-12">
-            <div>
-              <div className="mono-up text-mute mb-3">[ 003 / Commit shMON · pay gas with yield ]</div>
-              <h1 className="text-[clamp(40px,5vw,72px)] leading-[0.95] tracking-[-0.02em] font-light max-w-[14ch]">
-                Pay gas, <span className="serif italic">earn yield</span> — at the same time.
-              </h1>
-            </div>
-            <div className="mono text-[11.5px] text-mute2 max-w-[42ch] text-right">
-              Commit shMON to a Fastlane RPC policy. Transactions you send through the endpoint draw gas from your committed balance — while it keeps accruing.
-            </div>
-          </div>
+        <div className="max-w-[1480px] mx-auto px-6 lg:px-8 pt-[72px] pb-10 lg:pb-14">
+          {/* Single-column stack: How it works (top) → Commit modal → Rate Limit
+              Reference (bottom). Uniform 48px (mt-12) spacing between each card,
+              all 700px wide and centered to the nav bar. First card sits exactly
+              72px below the nav header. */}
+          <div className="max-w-[700px] mx-auto">
 
-          <div className="grid grid-cols-12 gap-6 lg:gap-8">
-            <div className="col-span-12 lg:col-span-7">
-              <div className="border border-hair2 bg-ink">
-                <div className="flex items-center hairline-b">
-                  <button className="flex-1 py-3.5 mono-up text-bone bg-ink3">Commit</button>
-                  <button className="flex-1 py-3.5 mono-up text-mute hover:text-bone">Decommit</button>
-                  <div className="px-5 mono text-[10.5px] text-mute2">policy · RPC</div>
-                </div>
-
-                <div className="p-7 lg:p-9">
-                  <div className="mono-up text-mute mb-3 flex justify-between">
-                    <span>Commit shMON</span>
-                    <span>Available · <span className="text-bone2 tnum">2,841.0091</span></span>
+            {/* "How it works" — two-step explainer */}
+            <div className="border border-hair2">
+              <div className="hairline-b flex items-center px-5 h-[44px]">
+                <span className="mono-up text-mute">How it works</span>
+              </div>
+              <div className="p-6 space-y-6">
+                {[
+                  { n: 1, title: "Commit to Fastlane RPC Policy", body: "First, commit shMON tokens to the Fastlane RPC policy to unlock endpoint generation." },
+                  { n: 2, title: "Generate Endpoint",             body: "Sign a message with your wallet to create a unique, authenticated RPC endpoint." },
+                ].map((step) => (
+                  <div key={step.n} className="flex items-start gap-4">
+                    <div className="w-9 h-9 bg-lime flex items-center justify-center flex-shrink-0">
+                      <span className="text-lime-fg tnum text-[15px] font-bold leading-none">{step.n}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-bone text-[13.5px] font-medium mb-1.5">{step.title}</div>
+                      <p className="mono text-[12px] leading-[1.65] text-bone2">{step.body}</p>
+                    </div>
                   </div>
-                  <div className="border hair2 bg-ink2 flex items-center px-5 h-[78px]">
-                    <input id="rpcIn" type="text" inputMode="decimal" defaultValue="250.00" className="flex-1 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
-                    <div className="flex items-center gap-2">
-                      <span className="w-7 h-7 bg-lime block" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% 75%, 0 100%)" }} />
+                ))}
+              </div>
+            </div>
+
+            {/* Commit / Uncommit modal — 48px below How it works */}
+            <div className="mt-12 border border-hair2 bg-ink">
+              <div className="flex items-center hairline-b">
+                <button className="flex-1 py-3.5 mono-up text-bone bg-ink3">Commit</button>
+                <button className="flex-1 py-3.5 mono-up text-mute hover:text-bone">Uncommit</button>
+              </div>
+
+              <div className="p-7 lg:p-9">
+                <div className="mono-up text-mute mb-3 flex justify-between">
+                  <span>Enter amount to commit</span>
+                  <span>Available · <span className="text-bone2 tnum">2,841.0091</span></span>
+                </div>
+                <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px]">
+                  <input id="rpcIn" type="text" inputMode="decimal" defaultValue="250.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {/* MAX button — matches the Stake form's MAX styling */}
+                    <button id="rpcMaxBtn" className="mono text-[10.5px] text-bone border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition">MAX</button>
+                    <div className="flex items-center gap-2 ml-1">
+                      {/* Round placeholder holding the shMON token icon (drop /site/public/shmon-token-new.svg) */}
+                      <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/shmon-token-new.svg" alt="shMON" className="w-5 h-5 object-contain" />
+                      </span>
                       <span className="text-[15px]">shMON</span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="mt-7">
-                    <div className="mono-up text-mute mb-3 flex justify-between">
-                      <span>Policy duration</span>
-                      <span className="text-bone2"><span id="durDays" className="tnum">30</span> days · auto-renew</span>
+                <div className="mt-7">
+                  <div className="mono-up text-mute mb-3 flex justify-between">
+                    <span>Policy duration</span>
+                    <span className="text-bone2"><span id="durDays" className="tnum">30</span> days · auto-renew</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="7"
+                    max="180"
+                    step="1"
+                    defaultValue="30"
+                    className="lime-slider w-full"
+                    id="durRange"
+                    // JSX-level handler — re-binds on every render so it's
+                    // not subject to stale closure references from useEffect.
+                    onInput={(e) => {
+                      const d = parseInt((e.target as HTMLInputElement).value || "30");
+                      const dur = document.getElementById("durDays");
+                      const rateVal = document.getElementById("rateLimitVal");
+                      if (dur) dur.textContent = String(d);
+                      if (rateVal) {
+                        // Same tier table as in useEffect's tierPerMinForDays
+                        const perMin = d < 36 ? 600 : d < 94 ? 1500 : d < 152 ? 3000 : 6000;
+                        rateVal.textContent = perMin.toLocaleString();
+                      }
+                    }}
+                  />
+                  <div className="flex justify-between mono text-[12px] text-mute mt-2">
+                    <span>Builder</span><span>Pro</span><span>Infra Operator</span><span>Enterprise</span>
+                  </div>
+                </div>
+
+                {/* Rate Limit callout — value reacts to the Policy Duration
+                    slider above (Builder/Pro/Infra Operator/Enterprise tiers). */}
+                <div className="mt-4 border border-hair2 bg-ink2 px-5 py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {/* Lightning bolt glyph — path shifted left by 3 units so the
+                          bolt's leftmost point sits at x=0 of the viewBox. This makes
+                          its visual left edge align with the footnote asterisk below. */}
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="text-lime">
+                        <path d="M6 1 L0 9 L4 9 L4 15 L10 7 L6 7 Z" fill="currentColor" />
+                      </svg>
+                      <span className="mono-up text-mute2" style={{ fontSize: 13 }}>Rate Limit</span>
                     </div>
-                    <input type="range" min="7" max="180" step="1" defaultValue="30" className="lime-slider w-full" id="durRange" />
-                    <div className="flex justify-between mono text-[10.5px] text-mute mt-2">
-                      <span>7d</span><span>30d</span><span>90d</span><span>180d</span>
+                    <div className="mono text-[14px]">
+                      <span id="rateLimitVal" className="tnum text-bone font-medium">600</span>
+                      <span className="text-mute2 ml-1">Per Min</span>
+                      {/* Footnote asterisks — text-bone (not lime) for WCAG-AA contrast at small sizes */}
+                      <span className="text-bone">*</span>
                     </div>
                   </div>
-
-                  <dl className="mt-7 mono text-[12.5px]">
-                    <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Policy</dt><dd>Fastlane RPC · standard</dd></div>
-                    <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Gas budget</dt><dd className="tnum" id="gasBudget">≈ 5,940,000 gas · 14,850 tx</dd></div>
-                    <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Yield accrues to</dt><dd className="text-lime">Your wallet · uninterrupted</dd></div>
-                    <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Unlock</dt><dd className="tnum">Any time · 2-block delay</dd></div>
-                    <div className="flex justify-between py-2"><dt className="text-mute">Cost</dt><dd className="tnum text-lime">0 — committed shMON is collateral, not spent</dd></div>
-                  </dl>
-
-                  <button className="cta-fl mt-7 w-full inline-flex items-center justify-center gap-3 h-[58px] bg-lime text-ink text-[14.5px] font-medium">
-                    <span>Commit <span id="rpcCta" className="tnum">250.00</span> shMON</span>
-                    <span>→</span>
-                  </button>
+                  <div className="mono text-[11px] text-mute2 mt-2">
+                    <span className="text-bone">*</span> Actual rate limit will be calculated based on total policy stake
+                  </div>
                 </div>
+
+                <dl className="mt-7 mono text-[12.5px]">
+                  <div className="flex justify-between py-2"><dt className="text-mute">Policy</dt><dd>Fastlane RPC · standard</dd></div>
+                </dl>
+
+                <button className="cta-fl mt-7 w-full inline-flex items-center justify-center h-[58px] bg-lime text-lime-fg text-[14.5px] font-medium">
+                  <span className="fl-track">
+                    <span>Commit <span className="tnum rpcCtaAmt">250.00</span> shMON</span>
+                    <span>Commit <span className="tnum rpcCtaAmt">250.00</span> shMON</span>
+                  </span>
+                </button>
               </div>
             </div>
 
-            <div className="col-span-12 lg:col-span-5 space-y-6">
-              <div className="border border-hair2">
-                <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
-                  <span className="mono-up text-mute">How commit works</span>
-                </div>
-                <div className="p-6 mono text-[12.5px] leading-[1.75] text-bone2 space-y-3">
-                  <p><span className="text-lime">01 ·</span> Your shMON is locked as a gas policy. It still earns staking yield.</p>
-                  <p><span className="text-lime">02 ·</span> Transactions through the Fastlane RPC draw gas from the policy.</p>
-                  <p><span className="text-lime">03 ·</span> Decommit any time. 2-block delay; balance returns liquid.</p>
-                  <p><span className="text-lime">04 ·</span> One commit covers unlimited tx until policy depletes.</p>
-                </div>
+            {/* Rate Limit Reference — 48px below the Commit modal */}
+            <div className="mt-12 border border-hair2">
+              <div className="hairline-b flex items-center justify-center px-5 h-[44px]">
+                <span className="mono-up text-bone2" style={{ fontSize: 13 }}>Rate Limit Reference</span>
               </div>
 
-              <div className="border border-hair2">
-                <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
-                  <span className="mono-up text-mute">Your active policies</span>
-                  <span className="mono text-[10.5px] text-mute2">0</span>
-                </div>
-                <div className="p-6 mono text-[12px] text-mute2 leading-relaxed">
-                  No active policies. Connect a wallet to see and manage commits.
-                </div>
+              {/* Column headers */}
+              <div className="hairline-b grid grid-cols-[1.2fr_1fr_1fr] gap-3 px-5 py-3 mono-up text-mute2" style={{ fontSize: 11 }}>
+                <span>Tier</span>
+                <span className="text-center">Rate Limit</span>
+                <span className="text-right flex items-center justify-end gap-1.5">
+                  Estimated shMON
+                  <span className="inline-flex w-3.5 h-3.5 rounded-full border border-hair2 items-center justify-center text-[9px] text-mute2 leading-none cursor-help" title="Estimated shMON commitment needed to maintain this tier's rate limit.">i</span>
+                </span>
               </div>
 
-              <div className="border border-hair2 bg-ink2">
-                <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
-                  <span className="mono-up text-mute">Network-wide</span>
-                </div>
-                <div className="grid grid-cols-2 hairline-b">
-                  <div className="p-5 hairline-r">
-                    <div className="mono-up text-mute mb-1">Committed</div>
-                    <div className="serif text-[28px] leading-none tnum">42.8M</div>
-                    <div className="mono text-[10.5px] text-mute2 mt-1">shMON · across 1,204 policies</div>
+              {/* Tier rows */}
+              {[
+                { name: "Builder",        sub: "Testing & pet projects",   note: null,                       rate: "10 req/sec",  perMin: "600 per min",   shmon: "3,382.04",  icon: "M5 3 H11 V5 L9.5 12 H6.5 L5 5 Z M4 13 H12 V14 H4 Z" },
+                { name: "Pro",            sub: "Professionals & MVPs",     note: "Compares to Default RPC",  rate: "25 req/sec",  perMin: "1,500 per min", shmon: "8,455.10",  icon: "M8 2 L10 6 L14 6.5 L11 9.5 L11.7 14 L8 11.8 L4.3 14 L5 9.5 L2 6.5 L6 6 Z" },
+                { name: "Infra Operator", sub: "HFT & App Service",        note: null,                       rate: "50 req/sec",  perMin: "3,000 per min", shmon: "16,910.20", icon: "M2 3 H14 V11 H2 Z M6 13 H10 V14 H6 Z M2 13 H14 V14 H2 Z" },
+                { name: "Enterprise",     sub: "Large-scale business",     note: null,                       rate: "100 req/sec", perMin: "6,000 per min", shmon: "33,820.41", icon: "M2 6 L8 2 L14 6 V7 H2 Z M3 8 H4.5 V12 H3 Z M6.5 8 H8 V12 H6.5 Z M10 8 H11.5 V12 H10 Z M13 8 H14 V12 H13 Z M2 13 H14 V14 H2 Z" },
+              ].map((tier, i, arr) => (
+                <div
+                  key={tier.name}
+                  className={`grid grid-cols-[1.2fr_1fr_1fr] gap-3 px-5 py-4 items-center ${i < arr.length - 1 ? "hairline-b" : ""}`}
+                >
+                  {/* Tier name + icon + subtitle */}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="text-lime" aria-hidden="true">
+                        <path d={tier.icon} />
+                      </svg>
+                      <span className="text-[13.5px] font-medium tracking-tight text-bone">{tier.name}</span>
+                    </div>
+                    <div className="mono text-mute2 mt-0.5" style={{ fontSize: 11 }}>{tier.sub}</div>
+                    {tier.note && (
+                      <div className="mono text-bone2 mt-1" style={{ fontSize: 11 }}>{tier.note}</div>
+                    )}
                   </div>
-                  <div className="p-5">
-                    <div className="mono-up text-mute mb-1">Gas paid · 30D</div>
-                    <div className="serif text-[28px] leading-none tnum">1.8B</div>
-                    <div className="mono text-[10.5px] text-mute2 mt-1">units · 4.5M tx subsidized</div>
+
+                  {/* Rate limit + per-min subtitle */}
+                  <div className="text-center">
+                    <div className="tnum text-bone text-[13.5px] font-medium">{tier.rate}</div>
+                    <div className="mono text-mute2 mt-0.5" style={{ fontSize: 11 }}>({tier.perMin})</div>
+                  </div>
+
+                  {/* Estimated shMON */}
+                  <div className="text-right">
+                    <div className="tnum text-bone text-[13.5px] font-medium">{tier.shmon}</div>
+                    <div className="mono text-mute2 mt-0.5" style={{ fontSize: 11 }}>shMON</div>
                   </div>
                 </div>
-                <div className="p-5">
-                  <div className="mono-up text-mute mb-1">Avg saving / tx</div>
-                  <div className="flex items-baseline gap-2"><span className="serif text-[28px] leading-none tnum">61%</span><span className="text-mute2 text-[11px]">vs public mempool</span></div>
-                </div>
+              ))}
+
+              {/* Footer — current commitment */}
+              <div className="hairline-t bg-ink2 px-5 py-3 text-center mono" style={{ fontSize: 12 }}>
+                <span className="text-mute2">Current Commitment:</span>
+                <span className="tnum text-bone ml-2">0.00 shMON</span>
               </div>
             </div>
+
           </div>
         </div>
       </main>
@@ -951,101 +1072,94 @@ export default function ShmonadPage() {
       {/* PAGE: DEGEN POOL */}
       <main id="page-degen" className="page">
         <div className="max-w-[1480px] mx-auto px-6 lg:px-8 py-10 lg:py-14">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-hair2 mb-10">
-            <div className="bg-ink p-6">
-              <div className="mono-up text-mute mb-3">Pool APR · 7D</div>
-              <div className="serif text-[52px] leading-none tnum text-lime">22.4<span className="text-mute2 text-[24px]">%</span></div>
-            </div>
-            <div className="bg-ink p-6">
-              <div className="mono-up text-mute mb-3">TVL</div>
-              <div className="serif text-[52px] leading-none tnum">$18.4M</div>
-            </div>
-            <div className="bg-ink p-6">
-              <div className="mono-up text-mute mb-3">Max drawdown · 30D</div>
-              <div className="serif text-[52px] leading-none tnum text-red">−4.1%</div>
-            </div>
-            <div className="bg-ink p-6">
-              <div className="mono-up text-mute mb-3">Strategies live</div>
-              <div className="serif text-[52px] leading-none tnum">7</div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-12 gap-6 lg:gap-8">
-            <div className="col-span-12 lg:col-span-7">
-              <div className="border border-hair2 bg-ink">
-                <div className="flex items-center hairline-b">
-                  <button className="flex-1 py-3.5 mono-up text-bone bg-ink3">Deposit</button>
-                  <button className="flex-1 py-3.5 mono-up text-mute hover:text-bone">Withdraw</button>
-                  <div className="px-5 mono text-[10.5px] text-red">unaudited</div>
-                </div>
-                <div className="p-7 lg:p-9">
-                  <div className="mono-up text-mute mb-3 flex justify-between"><span>Deposit shMON</span><span>Balance · <span className="text-bone2 tnum">2,841.0091</span></span></div>
-                  <div className="border hair2 bg-ink2 flex items-center px-5 h-[78px]">
-                    <input id="degenIn" type="text" inputMode="decimal" defaultValue="100.00" className="flex-1 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
-                    <div className="flex items-center gap-2">
-                      <span className="w-7 h-7 bg-lime block" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% 75%, 0 100%)" }} />
-                      <span className="text-[15px]">shMON</span>
-                    </div>
+          {/* Deposit modal — centered to the nav bar (no sidebar; sidebar
+              previously contained Strategy allocation + 90-day performance,
+              both removed). Details card sits below at 48px. */}
+          <div className="max-w-[700px] mx-auto">
+            <div className="border border-hair2 bg-ink">
+              <div className="flex items-center hairline-b">
+                <button className="flex-1 py-3.5 mono-up text-bone bg-ink3">Deposit</button>
+                <button className="flex-1 py-3.5 mono-up text-mute hover:text-bone">Withdraw</button>
+                <div className="px-5 mono text-[10.5px] text-red">unaudited</div>
+              </div>
+              <div className="p-7 lg:p-9">
+                <div className="mono-up text-mute mb-3 flex justify-between"><span>Deposit shMON</span><span>Balance · <span className="text-bone2 tnum">2,841.0091</span></span></div>
+                <div className="border hair2 bg-ink2 flex items-center px-5 h-[78px]">
+                  <input id="degenIn" type="text" inputMode="decimal" defaultValue="100.00" className="flex-1 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 bg-lime block" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% 75%, 0 100%)" }} />
+                    <span className="text-[15px]">shMON</span>
                   </div>
-
-                  <dl className="mt-7 mono text-[12.5px]">
-                    <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Pool</dt><dd>dgshMON v2</dd></div>
-                    <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Strategy</dt><dd>Looped staking + perp-funding capture + MEV bundle bidding</dd></div>
-                    <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Estimated APR</dt><dd className="tnum text-lime">22.4%</dd></div>
-                    <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Lockup</dt><dd>None · withdrawals processed end-of-epoch</dd></div>
-                    <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Performance fee</dt><dd className="tnum">10% on yield only</dd></div>
-                    <div className="flex justify-between py-2"><dt className="text-mute">Principal risk</dt><dd className="text-red">YES · strategies are unaudited</dd></div>
-                  </dl>
-
-                  <label className="mt-7 flex items-start gap-3 cursor-pointer">
-                    <input id="ackBox" type="checkbox" className="mt-1 accent-lime w-4 h-4" />
-                    <span className="mono text-[11.5px] text-mute2 leading-relaxed">I understand the Degen Pool runs unaudited strategies that may lose principal. I am not depositing more than I can afford to lose.</span>
-                  </label>
-
-                  <button id="degenCta" className="cta-fl mt-6 w-full inline-flex items-center justify-center gap-3 h-[58px] bg-ink3 text-mute text-[14.5px] font-medium cursor-not-allowed">
-                    <span>Acknowledge to continue</span>
-                  </button>
                 </div>
+
+                <dl className="mt-7 mono text-[12.5px]">
+                  <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Pool</dt><dd>dgshMON v2</dd></div>
+                  <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Strategy</dt><dd>Looped staking + perp-funding capture + MEV bundle bidding</dd></div>
+                  <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Estimated APR</dt><dd className="tnum text-lime">22.4%</dd></div>
+                  <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Lockup</dt><dd>None · withdrawals processed end-of-epoch</dd></div>
+                  <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Performance fee</dt><dd className="tnum">10% on yield only</dd></div>
+                  <div className="flex justify-between py-2"><dt className="text-mute">Principal risk</dt><dd className="text-red">YES · strategies are unaudited</dd></div>
+                </dl>
+
+                <label className="mt-7 flex items-start gap-3 cursor-pointer">
+                  <input id="ackBox" type="checkbox" className="mt-1 accent-lime w-4 h-4" />
+                  <span className="mono text-[11.5px] text-mute2 leading-relaxed">I understand the Degen Pool runs unaudited strategies that may lose principal. I am not depositing more than I can afford to lose.</span>
+                </label>
+
+                <button id="degenCta" className="cta-fl mt-6 w-full inline-flex items-center justify-center gap-3 h-[58px] bg-ink3 text-mute text-[14.5px] font-medium cursor-not-allowed">
+                  <span>Acknowledge to continue</span>
+                </button>
               </div>
             </div>
 
-            <div className="col-span-12 lg:col-span-5 space-y-6">
-              <div className="border border-hair2">
-                <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
-                  <span className="mono-up text-mute">Strategy allocation</span>
-                  <span className="mono text-[10.5px] text-mute2">rebalanced 4h ago</span>
+            {/* Degen Pool Details — collapsible card. The header chevron
+                button toggles the body open/closed. Chevron points DOWN when
+                collapsed (indicating "expand to reveal more") and UP when
+                expanded (indicating "collapse"). */}
+            <div className="mt-12 border border-hair2">
+              <button
+                type="button"
+                aria-expanded={degenDetailsOpen}
+                aria-controls="degen-details-body"
+                onClick={() => setDegenDetailsOpen((v) => !v)}
+                className={`w-full hairline-b flex items-center justify-between px-5 h-[44px] text-left transition ${degenDetailsOpen ? "" : "border-b-0"} hover:bg-ink2`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex w-3.5 h-3.5 rounded-full border border-mute2 items-center justify-center text-[9px] text-mute2 leading-none">i</span>
+                  <span className="mono-up text-bone2" style={{ fontSize: 13 }}>Degen Pool Details</span>
                 </div>
-                <div className="p-6">
-                  <ul className="space-y-3 mono text-[12px]">
-                    {[
-                      { l: "Looped shMON · 5x", v: 38, c: "bg-lime" },
-                      { l: "Perp funding · MON-PERP", v: 24, c: "bg-lime" },
-                      { l: "MEV bundle bidding", v: 18, c: "bg-lime" },
-                      { l: "JIT LP · concentrated", v: 12, c: "bg-lime" },
-                      { l: "Cash reserve", v: 8, c: "bg-mute" },
-                    ].map((s, i) => (
-                      <li key={i}>
-                        <div className="flex justify-between mb-1"><span className="text-bone2">{s.l}</span><span className="tnum">{s.v}%</span></div>
-                        <div className="h-1.5 bg-hair2 relative"><span className={`absolute top-0 left-0 h-full ${s.c}`} style={{ width: `${s.v}%` }} /></div>
-                      </li>
-                    ))}
-                  </ul>
+                {/* Chevron — rotates 180° when expanded */}
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  aria-hidden="true"
+                  className="text-mute2"
+                  style={{
+                    transform: degenDetailsOpen ? "rotate(180deg)" : "rotate(0deg)",
+                    transition: "transform 220ms cubic-bezier(0.6, 0.2, 0.2, 1)",
+                  }}
+                >
+                  <path d="M3 5 L7 9 L11 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                </svg>
+              </button>
+              {degenDetailsOpen && (
+                <div id="degen-details-body" className="p-6 space-y-5">
+                  <div>
+                    <div className="mono-up text-mute2 mb-2" style={{ fontSize: 11 }}>How it works</div>
+                    <p className="mono text-[12.5px] leading-[1.75] text-bone2">
+                      Deposits into the Degen Pool earn <span className="text-red">no yield</span>. Instead, your staked MON helps boost the APY for regular shMON holders. Although they don&apos;t understand why any reasonable person would intentionally give up yield, shMonad stakeholders are very appreciative of the noble sacrifice made by degens.
+                    </p>
+                  </div>
+                  <div>
+                    <div className="mono-up text-mute2 mb-2" style={{ fontSize: 11 }}>Liquidity &amp; exit</div>
+                    <p className="mono text-[12.5px] leading-[1.75] text-bone2">
+                      This pool is illiquid, nor are deposits tradeable in DeFi. When you withdraw, you receive 100% of your initial MON deposit value as shMON, which then begins earning normal yield.
+                    </p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="border border-hair2">
-                <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
-                  <span className="mono-up text-mute">90-day performance</span>
-                  <span className="mono text-[10.5px] text-lime tnum">+18.42%</span>
-                </div>
-                <div className="p-5">
-                  <svg viewBox="0 0 400 100" className="w-full h-24">
-                    <path d="M0 70 L20 65 L40 72 L60 55 L80 60 L100 48 L120 52 L140 38 L160 44 L180 30 L200 36 L220 50 L240 32 L260 28 L280 40 L300 22 L320 30 L340 18 L360 24 L380 12 L400 18" fill="none" stroke="#6105FF" strokeWidth="1.5" />
-                    <path d="M0 70 L20 65 L40 72 L60 55 L80 60 L100 48 L120 52 L140 38 L160 44 L180 30 L200 36 L220 50 L240 32 L260 28 L280 40 L300 22 L320 30 L340 18 L360 24 L380 12 L400 18 L400 100 L0 100 Z" fill="#6105FF" opacity="0.07" />
-                  </svg>
-                  <div className="flex justify-between mono text-[10.5px] text-mute mt-1"><span>−90d</span><span>now</span></div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

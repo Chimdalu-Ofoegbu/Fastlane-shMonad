@@ -151,13 +151,11 @@
 }
 .shmonad-root .cta-fl:hover .fl-fill { height: 100%; }
 .shmonad-root .cta-fl:hover { color: var(--sh-ink); }
-/* Filled-purple CTAs (e.g. the Stake/Unstake buttons) — hover deepens the
-   purple instead of inverting to bone. Staying inside the purple family
-   avoids the harsh white-flash edge against the dark page and keeps text
-   white (no low-contrast dark text on light bg). */
+/* Filled-purple CTAs (e.g. the Stake/Unstake buttons) — hover wipes the
+   purple bg to bone (white) while the fl-track text-slide reveals the
+   second text copy. Text inverts to ink (dark) for contrast. */
 .shmonad-root .cta-fl.bg-lime:hover {
-  background-color: var(--sh-lime2);
-  color: var(--sh-lime-fg);
+  background-color: var(--sh-bone);
 }
 .shmonad-root .cta-fl .fl-track {
   position: relative;
