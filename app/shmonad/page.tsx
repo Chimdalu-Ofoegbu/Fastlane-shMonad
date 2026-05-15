@@ -1,10 +1,73 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import ThemeToggle from "@/components/client/ThemeToggle";
+import MatrixCanvas from "@/components/client/MatrixCanvas";
 import "./shmonad.css";
 
+const SHMONAD_MATRIX_WORDS = ["STAKE", "SHMONAD"];
+
+type DepositToken = "MON" | "WMON";
+
+const DEPOSIT_TOKENS: { id: DepositToken; label: string; sub: string; icon: string }[] = [
+  { id: "MON", label: "MON", sub: "Native Monad", icon: "/monad-token.svg" },
+  { id: "WMON", label: "WMON", sub: "Wrapped MON", icon: "/monad-token.svg" },
+];
+
 export default function ShmonadPage() {
+  const [depositToken, setDepositToken] = useState<DepositToken>("MON");
+  const [tokenMenuOpen, setTokenMenuOpen] = useState(false);
+  const tokenMenuRef = useRef<HTMLDivElement | null>(null);
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [stakeMode, setStakeMode] = useState<"stake" | "unstake">("stake");
+
+  // When the user connects, hydrate the freshly-mounted fl-track ctaAmt spans
+  // (Stake + Unstake) from the current input values so each CTA shows the
+  // right amount immediately. The imperative recalc handlers only fire on
+  // input/preset events, not on the React state flip.
+  useEffect(() => {
+    if (!walletConnected) return;
+    const fmt = (raw: string | null | undefined, fallback: string) => {
+      const v = parseFloat((raw || fallback).replace(/,/g, "")) || 0;
+      return v.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    };
+    const stakeInput = document.getElementById("stakeIn") as HTMLInputElement | null;
+    const stakeFormatted = fmt(stakeInput?.value, "500");
+    document
+      .querySelectorAll<HTMLSpanElement>(".shmonad-root .ctaAmt")
+      .forEach((el) => { el.textContent = stakeFormatted; });
+
+    const unstakeInput = document.getElementById("unstakeIn") as HTMLInputElement | null;
+    const unstakeFormatted = fmt(unstakeInput?.value, "0");
+    document
+      .querySelectorAll<HTMLSpanElement>(".shmonad-root .unstakeCtaAmt")
+      .forEach((el) => { el.textContent = unstakeFormatted; });
+  }, [walletConnected]);
+
+  // Close the deposit-token dropdown when clicking anywhere outside it,
+  // and on Escape — standard menu behavior.
+  useEffect(() => {
+    if (!tokenMenuOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (!tokenMenuRef.current) return;
+      if (!tokenMenuRef.current.contains(e.target as Node)) {
+        setTokenMenuOpen(false);
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setTokenMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [tokenMenuOpen]);
+
   useEffect(() => {
     // Mark body so the root grain overlay is hidden on this page.
     document.body.classList.add("shmonad-body");
@@ -41,7 +104,6 @@ export default function ShmonadPage() {
     const stakeInput = document.getElementById("stakeIn") as HTMLInputElement | null;
     const stakeOut = document.getElementById("stakeOut");
     const yld = document.getElementById("yieldOut");
-    const cta = document.getElementById("ctaAmt");
     const maxBtn = document.getElementById("maxBtn");
     const rate = 0.9423;
     const apr = 0.0784;
@@ -56,7 +118,12 @@ export default function ShmonadPage() {
       const v = parseFloat((stakeInput.value || "0").replace(/,/g, "")) || 0;
       if (stakeOut) stakeOut.textContent = fmt(v * rate, 4);
       if (yld) yld.textContent = fmt(v * apr, 2) + " MON";
-      if (cta) cta.textContent = fmt(v, 2);
+      // Re-query each tick — the fl-track ctaAmt spans only exist after the
+      // user connects a wallet (React mounts them then). Two copies (one per
+      // fl-track <span>) must stay in sync.
+      document
+        .querySelectorAll<HTMLSpanElement>(".shmonad-root .ctaAmt")
+        .forEach((el) => { el.textContent = fmt(v, 2); });
     }
     stakeInput?.addEventListener("input", recalcStake);
     maxBtn?.addEventListener("click", () => {
@@ -75,49 +142,31 @@ export default function ShmonadPage() {
     /* ─── UNSTAKE WIDGET ─── */
     const unstakeInput = document.getElementById("unstakeIn") as HTMLInputElement | null;
     const unstakeOut = document.getElementById("unstakeOut");
-    const unstakeCta = document.getElementById("unstakeCta");
+    const unstakeMaxBtn = document.getElementById("unstakeMaxBtn");
     const rateInst = 1.0598;
-    const ratePar = 1.0612;
-    const instant = document.getElementById("modeInstant");
-    const queue = document.getElementById("modeQueue");
-    const modeLbl = document.getElementById("modeLabel");
-    const feeLbl = document.getElementById("feeLabel");
-    const settleLbl = document.getElementById("settleLabel");
-    const rateLbl = document.getElementById("unstakeRate");
-    let mode: "instant" | "queue" = "instant";
+    const shBal = 8422.18;
     function recalcUnstake() {
       if (!unstakeInput) return;
       const v = parseFloat((unstakeInput.value || "0").replace(/,/g, "")) || 0;
-      const r = mode === "instant" ? rateInst : ratePar;
-      if (unstakeOut) unstakeOut.textContent = fmt(v * r, 2);
-      if (unstakeCta)
-        unstakeCta.textContent = "Unstake " + fmt(v, 2) + " shMON";
+      if (unstakeOut) unstakeOut.textContent = fmt(v * rateInst, 2);
+      // fl-track CTA on the Unstake form — both copies stay in sync.
+      document
+        .querySelectorAll<HTMLSpanElement>(".shmonad-root .unstakeCtaAmt")
+        .forEach((el) => { el.textContent = fmt(v, 2); });
     }
     unstakeInput?.addEventListener("input", recalcUnstake);
-    instant?.addEventListener("click", () => {
-      mode = "instant";
-      instant.classList.add("bg-ink3", "text-bone");
-      instant.classList.remove("bg-ink2", "text-mute2");
-      queue?.classList.remove("bg-ink3", "text-bone");
-      queue?.classList.add("bg-ink2", "text-mute2");
-      if (modeLbl) modeLbl.textContent = "Instant · settled from buffer";
-      if (feeLbl) feeLbl.textContent = "14 bps · variable";
-      if (settleLbl) settleLbl.textContent = "1 block · ≈ 0.6s";
-      if (rateLbl) rateLbl.textContent = "↓ 1 shMON = 1.0598 MON · 14 bps fee";
+    unstakeMaxBtn?.addEventListener("click", () => {
+      if (unstakeInput) unstakeInput.value = shBal.toFixed(4);
       recalcUnstake();
     });
-    queue?.addEventListener("click", () => {
-      mode = "queue";
-      queue.classList.add("bg-ink3", "text-bone");
-      queue.classList.remove("bg-ink2", "text-mute2");
-      instant?.classList.remove("bg-ink3", "text-bone");
-      instant?.classList.add("bg-ink2", "text-mute2");
-      if (modeLbl) modeLbl.textContent = "Standard · queued at par";
-      if (feeLbl) feeLbl.textContent = "0 bps · zero fee";
-      if (settleLbl) settleLbl.textContent = "Next epoch · ≈ 12 min";
-      if (rateLbl)
-        rateLbl.textContent = "↓ 1 shMON = 1.0612 MON · par redemption";
-      recalcUnstake();
+    const unstakePctBtns = document.querySelectorAll<HTMLButtonElement>(
+      ".shmonad-root .unstake-pct-btn"
+    );
+    unstakePctBtns.forEach((b) => {
+      b.addEventListener("click", () => {
+        if (unstakeInput) unstakeInput.value = (shBal * parseFloat(b.dataset.pct || "0")).toFixed(2);
+        recalcUnstake();
+      });
     });
     recalcUnstake();
 
@@ -374,13 +423,11 @@ export default function ShmonadPage() {
 
           <nav className="hidden md:flex items-center gap-7 text-[13px] text-mute2">
             <a className="nav-link" href="#/stake" data-nav="stake">Stake</a>
-            <a className="nav-link" href="#/unstake" data-nav="unstake">Unstake</a>
             <a className="nav-link" href="#/rpc" data-nav="rpc">Fastlane RPC</a>
             <a className="nav-link" href="#/points" data-nav="points">
               Points <span className="mono text-[9px] text-lime ml-1 align-top">NEW</span>
             </a>
             <a className="nav-link" href="#/degen" data-nav="degen">Degen Pool</a>
-            <a className="nav-link" href="#/ecosystem" data-nav="ecosystem">Ecosystem</a>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -393,13 +440,10 @@ export default function ShmonadPage() {
         </div>
 
         <div className="border-t hair hidden md:block">
-          <div className="max-w-[1480px] mx-auto px-6 lg:px-8 h-[36px] grid grid-cols-12 items-center mono text-[11px]">
-            <div className="col-span-2 flex items-baseline gap-2"><span className="text-mute">TVL</span> <span className="tnum text-bone">$412.8M</span> <span className="text-lime tnum">+4.12%</span></div>
-            <div className="col-span-2 hairline-l pl-4 flex items-baseline gap-2"><span className="text-mute">APR</span> <span className="tnum text-bone">7.84%</span></div>
-            <div className="col-span-2 hairline-l pl-4 flex items-baseline gap-2"><span className="text-mute">PEG</span> <span className="tnum text-bone">1 shMON = 1.0612 MON</span></div>
-            <div className="col-span-2 hairline-l pl-4 flex items-baseline gap-2"><span className="text-mute">EPOCH</span> <span className="tnum text-bone">14,209</span></div>
-            <div className="col-span-2 hairline-l pl-4 flex items-baseline gap-2"><span className="text-mute">VALIDATORS</span> <span className="tnum text-bone">42 / 100</span></div>
-            <div className="col-span-2 hairline-l pl-4 flex items-baseline gap-2"><span className="text-mute">SLASHES · 90D</span> <span className="tnum text-bone">0</span></div>
+          <div className="max-w-[1480px] mx-auto px-6 lg:px-8 py-4 grid grid-cols-12 items-start mono text-[15px]">
+            <div className="col-span-4 flex flex-col items-start gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>TVL</span> <span className="tnum text-bone font-bold text-[32px] leading-none">$412.8M</span></div>
+            <div className="col-span-4 hairline-l pl-6 flex flex-col items-start gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>APY</span> <span className="tnum text-bone font-bold text-[32px] leading-none">20.54%</span></div>
+            <div className="col-span-4 hairline-l pl-6 flex flex-col items-start gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>HOLDERS</span> <span className="tnum text-bone font-bold text-[32px] leading-none">2,968</span></div>
           </div>
         </div>
       </header>
@@ -407,42 +451,99 @@ export default function ShmonadPage() {
       {/* PAGE: STAKE */}
       <main id="page-stake" className="page">
         <div className="max-w-[1480px] mx-auto px-6 lg:px-8 py-10 lg:py-14">
-          <div className="flex flex-wrap items-end justify-between gap-6 mb-12">
-            <div>
-              <div className="mono-up text-mute mb-3">[ 001 / Stake MON for shMON ]</div>
-              <h1 className="text-[clamp(40px,5vw,72px)] leading-[0.95] tracking-[-0.02em] font-light">
-                Earn <span className="serif italic">7.84%</span> on idle MON.
-              </h1>
-            </div>
-            <div className="mono text-[11.5px] text-mute2 max-w-[36ch] text-right">
-              Holistic liquid staking. Receive shMON in the same block. Use it anywhere on Monad while it accrues.
-            </div>
-          </div>
-
           <div className="grid grid-cols-12 gap-6 lg:gap-8">
             <div className="col-span-12 lg:col-span-7">
               <div id="stake-mod" className="border border-hair2 bg-ink">
                 <div className="flex items-center hairline-b">
-                  <button data-tab="stake" className="tab-btn flex-1 py-3.5 mono-up text-bone bg-ink3">Stake</button>
-                  <button data-tab="unstake" className="tab-btn flex-1 py-3.5 mono-up text-mute" onClick={() => { location.hash = "#/unstake"; }}>Unstake</button>
-                  <div className="px-5 mono text-[10.5px] text-mute2 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-lime live-dot" /> mainnet · 0x4b…91Ae
-                  </div>
+                  <button
+                    type="button"
+                    data-tab="stake"
+                    onClick={() => setStakeMode("stake")}
+                    className={`tab-btn flex-1 py-3.5 mono-up text-[14px] transition ${stakeMode === "stake" ? "text-bone bg-ink3" : "text-mute hover:text-bone"}`}
+                  >
+                    Stake
+                  </button>
+                  <button
+                    type="button"
+                    data-tab="unstake"
+                    onClick={() => setStakeMode("unstake")}
+                    className={`tab-btn flex-1 py-3.5 mono-up text-[14px] transition ${stakeMode === "unstake" ? "text-bone bg-ink3" : "text-mute hover:text-bone"}`}
+                  >
+                    Unstake
+                  </button>
                 </div>
 
-                <div className="p-7 lg:p-9">
-                  <div className="mono-up text-mute mb-3 flex justify-between">
+                <div className={`p-7 lg:p-9 ${stakeMode === "stake" ? "" : "hidden"}`}>
+                  <div className="mono-up text-mute mb-3 flex justify-between items-center">
                     <span>You deposit</span>
-                    <span>Balance · <span className="text-bone2 tnum" id="balMON">1,284.5102 MON</span></span>
+                    <span className="text-bone2 tnum text-[13.2px]" id="balMON">1,284.5102 {depositToken}</span>
                   </div>
-                  <div className="border hair2 bg-ink2 flex items-center px-5 h-[78px]">
-                    <input id="stakeIn" type="text" inputMode="decimal" defaultValue="500.00" className="flex-1 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
-                    <div className="flex items-center gap-3">
-                      <button id="maxBtn" className="mono text-[10.5px] text-lime border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition">MAX</button>
-                      <button className="mono text-[10.5px] text-mute2 border border-hair2 px-2 py-1 hover:text-bone transition">HALF</button>
-                      <div className="flex items-center gap-2 ml-1">
-                        <span className="w-7 h-7 bg-bone block" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% 75%, 0 100%)" }} />
-                        <span className="text-[15px]">MON</span>
+                  <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] relative">
+                    <input id="stakeIn" type="text" inputMode="decimal" defaultValue="500.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button id="maxBtn" className="mono text-[10.5px] text-bone border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition">MAX</button>
+                      {/* Token selector — opens a small dropdown menu of choices. */}
+                      <div ref={tokenMenuRef} className="relative ml-1">
+                        <button
+                          type="button"
+                          aria-haspopup="menu"
+                          aria-expanded={tokenMenuOpen}
+                          onClick={() => setTokenMenuOpen((v) => !v)}
+                          className="token-trigger flex items-center gap-2 px-2 py-1.5 border border-transparent hover:border-hair2 hover:bg-ink3 transition"
+                        >
+                          <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={DEPOSIT_TOKENS.find((t) => t.id === depositToken)?.icon} alt={depositToken} className="w-5 h-5 object-contain" />
+                          </span>
+                          <span className="text-[15px]">{depositToken}</span>
+                          <svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 10 10"
+                            fill="none"
+                            className={`text-mute2 token-chevron ${tokenMenuOpen ? "is-open" : ""}`}
+                            aria-hidden="true"
+                          >
+                            <path d="M2 4 L5 7 L8 4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="square" />
+                          </svg>
+                        </button>
+
+                        <div
+                          role="menu"
+                          aria-hidden={!tokenMenuOpen}
+                          className={`token-menu absolute right-0 top-[calc(100%+8px)] z-20 w-[260px] border border-hair2 bg-ink shadow-2xl ${tokenMenuOpen ? "is-open" : ""}`}
+                        >
+                          <div className="mono-up text-mute text-[10px] px-4 pt-3 pb-2 hairline-b">Select deposit token</div>
+                          {DEPOSIT_TOKENS.map((t) => {
+                            const active = t.id === depositToken;
+                            return (
+                              <button
+                                key={t.id}
+                                role="menuitemradio"
+                                aria-checked={active}
+                                onClick={() => {
+                                  setDepositToken(t.id);
+                                  setTokenMenuOpen(false);
+                                }}
+                                className="token-option w-full text-left flex items-center gap-3 px-4 py-3 hairline-b last:border-b-0"
+                              >
+                                <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={t.icon} alt={t.label} className="w-5 h-5 object-contain" />
+                                </span>
+                                <span className="flex-1 min-w-0">
+                                  <span className="block text-[14px] text-bone">{t.label}</span>
+                                  <span className="block mono text-[10.5px] text-mute2">{t.sub}</span>
+                                </span>
+                                <span className={`token-check w-4 h-4 border border-hair2 flex items-center justify-center ${active ? "is-active" : ""}`} aria-hidden="true">
+                                  <svg width="9" height="9" viewBox="0 0 10 10" fill="none" className={active ? "opacity-100" : "opacity-0"}>
+                                    <path d="M2 5 L4.5 7.5 L8 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" strokeLinejoin="miter" />
+                                  </svg>
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -454,252 +555,200 @@ export default function ShmonadPage() {
                     <button className="pct-btn bg-ink2 py-2 mono text-[10.5px] text-mute2 hover:text-bone hover:bg-ink3" data-pct="1.00">MAX</button>
                   </div>
 
-                  <div className="flex items-center gap-3 my-5 mono text-[10.5px] text-mute2">
+                  {/* Swap-direction chip — mirrors the central down-arrow node between the two cards in the live design */}
+                  <div className="flex items-center gap-3 my-5">
                     <span className="flex-1 h-px bg-hair2" />
-                    <span>↓ rate · 1 MON = 0.9423 shMON</span>
+                    <span className="w-9 h-9 border border-hair2 bg-ink flex items-center justify-center text-mute2">
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                        <path d="M7 1.5 L7 11.5 M3 8 L7 12 L11 8" stroke="currentColor" strokeWidth="1.1" strokeLinecap="square" strokeLinejoin="miter" />
+                      </svg>
+                    </span>
                     <span className="flex-1 h-px bg-hair2" />
                   </div>
 
-                  <div className="mono-up text-mute mb-3">You receive</div>
-                  <div className="border hair2 bg-ink2 flex items-center px-5 h-[78px]">
-                    <span id="stakeOut" className="flex-1 text-[42px] tnum font-light tracking-tight">471.1500</span>
-                    <div className="flex items-center gap-2">
-                      <span className="w-7 h-7 bg-lime block" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% 75%, 0 100%)" }} />
+                  <div className="mono-up text-mute mb-3 flex justify-between items-center">
+                    <span>You receive</span>
+                    <span className="text-bone2 tnum text-[13.2px]">0.0000 shMON</span>
+                  </div>
+                  <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] overflow-hidden">
+                    <span id="stakeOut" className="flex-1 min-w-0 text-[42px] tnum font-light tracking-tight truncate">471.1500</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Round placeholder holding the shMON token icon (drop /site/public/shmon-token-new.svg) */}
+                      <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/shmon-token-new.svg" alt="shMON" className="w-5 h-5 object-contain" />
+                      </span>
                       <span className="text-[15px]">shMON</span>
                     </div>
                   </div>
 
                   <dl className="mt-7 mono text-[12.5px]">
-                    <div className="flex justify-between py-2 hairline-b">
-                      <dt className="text-mute">Estimated APR</dt>
-                      <dd className="tnum">7.84% <span className="text-mute2 ml-1">5.20 base + 1.38 mev + 1.26 comp</span></dd>
-                    </div>
-                    <div className="flex justify-between py-2 hairline-b">
-                      <dt className="text-mute">Annual yield · est.</dt>
-                      <dd className="tnum text-lime" id="yieldOut">39.20 MON</dd>
-                    </div>
-                    <div className="flex justify-between py-2 hairline-b">
-                      <dt className="text-mute">Validator routing</dt>
-                      <dd className="tnum">42 nodes · performance-weighted</dd>
-                    </div>
-                    <div className="flex justify-between py-2 hairline-b">
-                      <dt className="text-mute">Network fee</dt>
-                      <dd className="tnum">≈ 0.00041 MON</dd>
+                    {/* Exchange rate — mirrors the live design's bottom-row rate callout with info-icon affordance */}
+                    <div className="flex justify-between py-2">
+                      <dt className="text-mute flex items-center gap-1.5">
+                        Exchange rate
+                        <span className="inline-flex w-3.5 h-3.5 rounded-full border border-hair2 items-center justify-center text-[9px] text-mute2 leading-none cursor-help" title="Conversion rate between MON and shMON at current epoch.">i</span>
+                      </dt>
+                      <dd className="tnum">1 {depositToken} = 0.9423 shMON</dd>
                     </div>
                     <div className="flex justify-between py-2">
-                      <dt className="text-mute">Settlement</dt>
-                      <dd className="tnum text-lime">Atomic · 1 block</dd>
+                      <dt className="text-mute flex items-center gap-1.5">
+                        APY
+                        <span className="inline-flex w-3.5 h-3.5 rounded-full border border-hair2 items-center justify-center text-[9px] text-mute2 leading-none cursor-help" title="Base validator rewards + MEV share + compounding, net of fees.">i</span>
+                      </dt>
+                      <dd className="tnum">20.54%</dd>
                     </div>
                   </dl>
 
-                  <button className="cta-fl mt-7 w-full inline-flex items-center justify-center gap-3 h-[58px] bg-lime text-ink text-[14.5px] font-medium">
-                    <span>Stake <span className="tnum" id="ctaAmt">500.00</span> MON</span>
-                    <span>→</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!walletConnected) setWalletConnected(true);
+                      // (no-op when connected — placeholder for real stake action)
+                    }}
+                    className="cta-fl mt-7 w-full inline-flex items-center justify-center h-[58px] bg-lime text-lime-fg text-[14.5px] font-medium"
+                  >
+                    <span className="fl-track">
+                      {walletConnected ? (
+                        <>
+                          <span>Stake <span className="tnum ctaAmt">500.00</span> {depositToken} →</span>
+                          <span>Stake <span className="tnum ctaAmt">500.00</span> {depositToken} →</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Connect wallet</span>
+                          <span>Connect wallet</span>
+                        </>
+                      )}
+                    </span>
                   </button>
-                  <div className="mt-3 mono text-[10px] text-mute text-center">Audited · OpenZeppelin & Spearbit · 0 slash events since launch</div>
                 </div>
-              </div>
-            </div>
 
-            <div className="col-span-12 lg:col-span-5 space-y-6">
-              <div className="border border-hair2">
-                <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
-                  <span className="mono-up text-mute">APR breakdown · 30D moving</span>
-                  <span className="mono text-[10.5px] text-lime">+22 bps vs base</span>
-                </div>
-                <div className="p-6">
-                  <div className="flex items-baseline gap-2">
-                    <span className="serif text-[64px] leading-none tnum">7.84</span>
-                    <span className="text-mute2 text-[20px]">%</span>
+                {/* ─── UNSTAKE FORM ─── mirrors the Stake form but reversed:
+                    deposit shMON, receive MON, single exchange rate + unbond row. */}
+                <div className={`p-7 lg:p-9 ${stakeMode === "unstake" ? "" : "hidden"}`}>
+                  <div className="mono-up text-mute mb-3 flex justify-between items-center">
+                    <span>You unstake</span>
+                    <span className="text-bone2 tnum text-[13.2px]">8,422.18 shMON</span>
                   </div>
-                  <div className="mt-6 h-3 w-full flex border hair2 overflow-hidden">
-                    <span className="bg-bone/80" style={{ width: "66.3%" }} />
-                    <span className="bg-lime" style={{ width: "17.6%" }} />
-                    <span className="bg-mute" style={{ width: "16.1%" }} />
-                  </div>
-                  <dl className="mt-5 mono text-[12px] space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <dt className="flex items-center gap-2"><span className="w-2 h-2 bg-bone/80" /><span className="text-mute2">Validator base</span></dt>
-                      <dd className="tnum">5.20%</dd>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <dt className="flex items-center gap-2"><span className="w-2 h-2 bg-lime" /><span className="text-mute2">MEV (Fastlane)</span></dt>
-                      <dd className="tnum">1.38%</dd>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <dt className="flex items-center gap-2"><span className="w-2 h-2 bg-mute" /><span className="text-mute2">Re-stake compounding</span></dt>
-                      <dd className="tnum">1.26%</dd>
-                    </div>
-                  </dl>
-                </div>
-              </div>
-
-              <div className="border border-hair2">
-                <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
-                  <span className="mono-up text-mute">Validator routing</span>
-                  <span className="mono text-[10.5px] text-mute2">42 · weighted</span>
-                </div>
-                <div className="p-5">
-                  <div className="grid gap-px" style={{ gridTemplateColumns: "repeat(14, minmax(0,1fr))" }} id="valGrid" />
-                  <div className="flex justify-between mono text-[10.5px] text-mute mt-4">
-                    <span>weight ·</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 bg-hair2" /> 0 <span className="w-2 h-2 bg-bone/30 ml-2" /> low <span className="w-2 h-2 bg-bone/70 ml-2" /> med <span className="w-2 h-2 bg-lime ml-2" /> high</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-hair2 bg-ink2">
-                <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
-                  <span className="mono-up text-mute">Your position</span>
-                  <button className="mono text-[10.5px] text-bone hover:text-lime">Connect →</button>
-                </div>
-                <div className="p-6 flex items-center gap-5">
-                  <span className="w-12 h-12 bg-hair2 block" />
-                  <div className="mono text-[12px] text-mute2 leading-relaxed">
-                    Connect a wallet to view your shMON balance, accrued yield, and active boost multipliers.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-12 border border-hair2">
-            <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
-              <span className="mono-up text-mute">Recent stakes · live</span>
-              <span className="mono text-[10.5px] text-mute2 flex items-center gap-2"><span className="w-1.5 h-1.5 bg-lime live-dot" /> streaming</span>
-            </div>
-            <div className="grid grid-cols-12 mono-up text-mute py-2.5 px-5 hairline-b">
-              <div className="col-span-2">Block</div>
-              <div className="col-span-3">Address</div>
-              <div className="col-span-2">Action</div>
-              <div className="col-span-2 text-right">Amount MON</div>
-              <div className="col-span-2 text-right">shMON</div>
-              <div className="col-span-1 text-right">Time</div>
-            </div>
-            <div id="stake-feed" className="mono text-[12px]" />
-          </div>
-        </div>
-      </main>
-
-      {/* PAGE: UNSTAKE */}
-      <main id="page-unstake" className="page">
-        <div className="max-w-[1480px] mx-auto px-6 lg:px-8 py-10 lg:py-14">
-          <div className="flex flex-wrap items-end justify-between gap-6 mb-12">
-            <div>
-              <div className="mono-up text-mute mb-3">[ 002 / Unstake shMON for MON ]</div>
-              <h1 className="text-[clamp(40px,5vw,72px)] leading-[0.95] tracking-[-0.02em] font-light">
-                Redeem <span className="serif italic">any block</span>.
-              </h1>
-            </div>
-            <div className="mono text-[11.5px] text-mute2 max-w-[40ch] text-right">
-              Instant redemption from the buffer, or queued claim at par. No mandatory cooldown.
-            </div>
-          </div>
-
-          <div className="grid grid-cols-12 gap-6 lg:gap-8">
-            <div className="col-span-12 lg:col-span-7">
-              <div className="border border-hair2 bg-ink">
-                <div className="flex items-center hairline-b">
-                  <button className="flex-1 py-3.5 mono-up text-mute" onClick={() => { location.hash = "#/stake"; }}>Stake</button>
-                  <button className="flex-1 py-3.5 mono-up text-bone bg-ink3">Unstake</button>
-                  <div className="px-5 mono text-[10.5px] text-mute2 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-lime live-dot" /> buffer · 38.2M MON
-                  </div>
-                </div>
-
-                <div className="p-7 lg:p-9">
-                  <div className="grid grid-cols-2 gap-px bg-hair2 mb-6">
-                    <button id="modeInstant" className="mode-btn bg-ink3 text-bone py-3 mono-up">Instant</button>
-                    <button id="modeQueue" className="mode-btn bg-ink2 text-mute2 hover:text-bone py-3 mono-up">Standard · queued</button>
-                  </div>
-
-                  <div className="mono-up text-mute mb-3 flex justify-between">
-                    <span>You redeem</span>
-                    <span>shMON balance · <span className="text-bone2 tnum">2,841.0091</span></span>
-                  </div>
-                  <div className="border hair2 bg-ink2 flex items-center px-5 h-[78px]">
-                    <input id="unstakeIn" type="text" inputMode="decimal" defaultValue="1000.00" className="flex-1 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
-                    <div className="flex items-center gap-3">
-                      <button className="mono text-[10.5px] text-lime border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition">MAX</button>
+                  <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] relative">
+                    <input id="unstakeIn" type="text" inputMode="decimal" defaultValue="0.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button id="unstakeMaxBtn" className="mono text-[10.5px] text-bone border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition">MAX</button>
                       <div className="flex items-center gap-2 ml-1">
-                        <span className="w-7 h-7 bg-lime block" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% 75%, 0 100%)" }} />
+                        <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src="/shmon-token-new.svg" alt="shMON" className="w-5 h-5 object-contain" />
+                        </span>
                         <span className="text-[15px]">shMON</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 my-5 mono text-[10.5px] text-mute2">
+                  <div className="mt-4 grid grid-cols-4 gap-px bg-hair2">
+                    <button className="unstake-pct-btn bg-ink2 py-2 mono text-[10.5px] text-mute2 hover:text-bone hover:bg-ink3" data-pct="0.25">25%</button>
+                    <button className="unstake-pct-btn bg-ink2 py-2 mono text-[10.5px] text-mute2 hover:text-bone hover:bg-ink3" data-pct="0.50">50%</button>
+                    <button className="unstake-pct-btn bg-ink2 py-2 mono text-[10.5px] text-mute2 hover:text-bone hover:bg-ink3" data-pct="0.75">75%</button>
+                    <button className="unstake-pct-btn bg-ink2 py-2 mono text-[10.5px] text-mute2 hover:text-bone hover:bg-ink3" data-pct="1.00">MAX</button>
+                  </div>
+
+                  <div className="flex items-center gap-3 my-5">
                     <span className="flex-1 h-px bg-hair2" />
-                    <span id="unstakeRate">↓ 1 shMON = 1.0598 MON · 14 bps fee</span>
+                    <span className="w-9 h-9 border border-hair2 bg-ink flex items-center justify-center text-mute2">
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                        <path d="M7 1.5 L7 11.5 M3 8 L7 12 L11 8" stroke="currentColor" strokeWidth="1.1" strokeLinecap="square" strokeLinejoin="miter" />
+                      </svg>
+                    </span>
                     <span className="flex-1 h-px bg-hair2" />
                   </div>
 
-                  <div className="mono-up text-mute mb-3">You receive</div>
-                  <div className="border hair2 bg-ink2 flex items-center px-5 h-[78px]">
-                    <span id="unstakeOut" className="flex-1 text-[42px] tnum font-light tracking-tight">1,059.80</span>
-                    <div className="flex items-center gap-2">
-                      <span className="w-7 h-7 bg-bone block" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% 75%, 0 100%)" }} />
+                  <div className="mono-up text-mute mb-3 flex justify-between items-center">
+                    <span>You receive</span>
+                    <span className="text-bone2 tnum text-[13.2px]">1,284.5102 MON</span>
+                  </div>
+                  <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] overflow-hidden">
+                    <span id="unstakeOut" className="flex-1 min-w-0 text-[42px] tnum font-light tracking-tight truncate">0.00</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/monad-token.svg" alt="MON" className="w-5 h-5 object-contain" />
+                      </span>
                       <span className="text-[15px]">MON</span>
                     </div>
                   </div>
 
                   <dl className="mt-7 mono text-[12.5px]">
-                    <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Mode</dt><dd id="modeLabel" className="text-lime">Instant · settled from buffer</dd></div>
-                    <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Fee</dt><dd id="feeLabel" className="tnum">14 bps · 1.48 MON</dd></div>
-                    <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Settlement</dt><dd id="settleLabel" className="tnum text-lime">1 block · ≈ 0.6s</dd></div>
-                    <div className="flex justify-between py-2"><dt className="text-mute">Network fee</dt><dd className="tnum">≈ 0.00038 MON</dd></div>
+                    <div className="flex justify-between py-2 hairline-b">
+                      <dt className="text-mute flex items-center gap-1.5">
+                        Exchange rate
+                        <span className="inline-flex w-3.5 h-3.5 rounded-full border border-hair2 items-center justify-center text-[9px] text-mute2 leading-none cursor-help" title="Redemption rate from shMON back to MON at current epoch.">i</span>
+                      </dt>
+                      <dd className="tnum">1 shMON = 1.0598 MON</dd>
+                    </div>
+                    <div className="flex justify-between py-2">
+                      <dt className="text-mute flex items-center gap-1.5">
+                        Unbond period
+                        <span className="inline-flex w-3.5 h-3.5 rounded-full border border-hair2 items-center justify-center text-[9px] text-mute2 leading-none cursor-help" title="Time before unstaked MON is available to withdraw.">i</span>
+                      </dt>
+                      <dd className="tnum text-lime">Instant · ≈ 0.6s</dd>
+                    </div>
                   </dl>
 
-                  <button className="cta-fl mt-7 w-full inline-flex items-center justify-center gap-3 h-[58px] bg-lime text-ink text-[14.5px] font-medium">
-                    <span id="unstakeCta">Unstake 1,000.00 shMON</span>
-                    <span>→</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!walletConnected) setWalletConnected(true);
+                      // (no-op when connected — placeholder for real unstake action)
+                    }}
+                    className="cta-fl mt-7 w-full inline-flex items-center justify-center h-[58px] bg-lime text-lime-fg text-[14.5px] font-medium"
+                  >
+                    <span className="fl-track">
+                      {walletConnected ? (
+                        <>
+                          <span>Unstake <span className="tnum unstakeCtaAmt">0.00</span> shMON →</span>
+                          <span>Unstake <span className="tnum unstakeCtaAmt">0.00</span> shMON →</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Connect wallet</span>
+                          <span>Connect wallet</span>
+                        </>
+                      )}
+                    </span>
                   </button>
                 </div>
               </div>
             </div>
 
             <div className="col-span-12 lg:col-span-5 space-y-6">
-              <div className="border border-hair2">
-                <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
-                  <span className="mono-up text-mute">Buffer health</span>
-                  <span className="mono text-[10.5px] text-lime">healthy</span>
-                </div>
-                <div className="p-6">
-                  <div className="flex items-baseline gap-2"><span className="serif text-[52px] leading-none tnum">38.2</span><span className="text-mute2">M MON</span></div>
-                  <div className="mt-2 mono text-[11px] text-mute2">9.3% of TVL · refreshes every epoch</div>
-                  <div className="mt-5 h-2 w-full bg-hair2 relative overflow-hidden">
-                    <span className="absolute top-0 left-0 h-full bg-lime" style={{ width: "76%" }} />
-                  </div>
-                  <div className="mt-1 flex justify-between mono text-[10.5px] text-mute"><span>min · 5%</span><span>cur · 9.3%</span><span>cap · 12%</span></div>
-                </div>
-              </div>
-
-              <div className="border border-hair2">
-                <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
-                  <span className="mono-up text-mute">Withdrawals · queue depth</span>
-                  <span className="mono text-[10.5px] text-mute2">epoch 14,209</span>
-                </div>
-                <div className="p-5">
-                  <div className="grid grid-cols-12 gap-1 mb-3 items-end h-16">
-                    {[40,60,35,75,50,30,88,62,40,55,48].map((h,i) => (
-                      <span key={i} className="bg-bone/70 col-span-1" style={{ height: `${h}%` }} />
-                    ))}
-                    <span className="bg-lime col-span-1" style={{ height: "72%" }} />
-                  </div>
-                  <div className="flex justify-between mono text-[10.5px] text-mute"><span>−12 epochs</span><span>now</span></div>
-                </div>
-              </div>
-
               <div className="border border-hair2 bg-ink2">
-                <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
-                  <span className="mono-up text-mute">Your pending</span>
+                <div className="hairline-b flex items-center px-5 h-[44px]">
+                  <span className="mono-up text-mute">Your position</span>
                 </div>
-                <div className="p-6 mono text-[12px] text-mute2 leading-relaxed">
-                  No pending withdrawals. Connect a wallet to see your claim history.
+                <div className="p-6 flex items-center gap-5">
+                  {/* Connect-wallet icon — line-art wallet glyph at 48×48 matching the editorial style */}
+                  <span className="w-12 h-12 flex items-center justify-center text-mute2 flex-shrink-0">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                      {/* Wallet body */}
+                      <rect x="5.5" y="14" width="37" height="25" stroke="currentColor" strokeWidth="1.4" />
+                      {/* Top fold/flap */}
+                      <path d="M5.5 14 L34 14 L34 8.5 L5.5 8.5 Z" fill="currentColor" />
+                      {/* Card slot / chip */}
+                      <circle cx="34" cy="26.5" r="2.4" fill="currentColor" />
+                      {/* Connection plug — small horizontal stem extending from the right edge */}
+                      <path d="M42.5 26.5 L46.5 26.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                      <path d="M46.5 23.5 L46.5 29.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                    </svg>
+                  </span>
+                  <div className="mono text-[12px] text-mute2 leading-relaxed">
+                    Connect a wallet to view your shMON balance, accrued yield, and active boost multipliers.
+                  </div>
                 </div>
               </div>
+
             </div>
           </div>
+
         </div>
       </main>
 
@@ -715,24 +764,6 @@ export default function ShmonadPage() {
             </div>
             <div className="mono text-[11.5px] text-mute2 max-w-[42ch] text-right">
               Commit shMON to a Fastlane RPC policy. Transactions you send through the endpoint draw gas from your committed balance — while it keeps accruing.
-            </div>
-          </div>
-
-          <div className="border border-hair2 bg-ink2 mb-10">
-            <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
-              <span className="mono-up text-mute">RPC endpoint</span>
-              <span className="mono text-[10.5px] text-lime flex items-center gap-2"><span className="w-1.5 h-1.5 bg-lime live-dot" /> 4ms · us-east</span>
-            </div>
-            <div className="p-5 flex flex-wrap items-center gap-3">
-              <code className="flex-1 min-w-[260px] mono text-[13px] text-bone bg-ink px-4 py-3 border hair2 overflow-x-auto">https://rpc.fastlane.xyz/v1/commit/{"{your-policy-key}"}</code>
-              <button className="cta-fl inline-flex items-center gap-2 px-4 h-[44px] border border-bone text-bone text-[12.5px]">
-                <span className="fl-track"><span>Copy</span><span>Copy</span></span>
-                <span className="fl-fill" />
-              </button>
-              <button className="cta-fl inline-flex items-center gap-2 px-4 h-[44px] bg-bone text-ink text-[12.5px] font-medium">
-                <span className="fl-track"><span>Add to MetaMask</span><span>Add to MetaMask</span></span>
-                <span className="fl-fill" />
-              </button>
             </div>
           </div>
 
@@ -920,18 +951,6 @@ export default function ShmonadPage() {
       {/* PAGE: DEGEN POOL */}
       <main id="page-degen" className="page">
         <div className="max-w-[1480px] mx-auto px-6 lg:px-8 py-10 lg:py-14">
-          <div className="flex flex-wrap items-end justify-between gap-6 mb-12">
-            <div>
-              <div className="mono-up text-mute mb-3">[ 005 / Degen Pool · higher risk, higher yield ]</div>
-              <h1 className="text-[clamp(40px,5vw,72px)] leading-[0.95] tracking-[-0.02em] font-light max-w-[14ch]">
-                For when <span className="serif italic">7.84%</span> isn&apos;t enough.
-              </h1>
-            </div>
-            <div className="mono text-[11.5px] text-red max-w-[42ch] text-right border-l border-red pl-3">
-              ⚠ DEGEN POOL · UNAUDITED STRATEGIES · CAN LOSE PRINCIPAL · NOT THE STANDARD shMON PRODUCT
-            </div>
-          </div>
-
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-hair2 mb-10">
             <div className="bg-ink p-6">
               <div className="mono-up text-mute mb-3">Pool APR · 7D</div>
@@ -1032,65 +1051,39 @@ export default function ShmonadPage() {
         </div>
       </main>
 
-      {/* PAGE: ECOSYSTEM */}
-      <main id="page-ecosystem" className="page">
-        <div className="max-w-[1480px] mx-auto px-6 lg:px-8 py-10 lg:py-14">
-          <div className="flex flex-wrap items-end justify-between gap-6 mb-12">
-            <div>
-              <div className="mono-up text-mute mb-3">[ 006 / Ecosystem · where shMON works ]</div>
-              <h1 className="text-[clamp(40px,5vw,72px)] leading-[0.95] tracking-[-0.02em] font-light max-w-[14ch]">
-                Use shMON <span className="serif italic">everywhere</span> on Monad.
-              </h1>
-            </div>
-            <div className="mono text-[11.5px] text-mute2 max-w-[40ch] text-right">
-              19 integrations live · 31 in development. Filter by category to find pools, markets, and venues.
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 mb-1 hairline-b pb-4">
-            <button className="eco-filter px-3 py-1.5 border border-lime text-lime mono text-[11px]" data-cat="all">All <span className="text-mute2 ml-1">19</span></button>
-            <button className="eco-filter px-3 py-1.5 border border-hair2 text-mute2 hover:text-bone mono text-[11px]" data-cat="dex">DEX <span className="text-mute2 ml-1">5</span></button>
-            <button className="eco-filter px-3 py-1.5 border border-hair2 text-mute2 hover:text-bone mono text-[11px]" data-cat="lending">Lending <span className="text-mute2 ml-1">4</span></button>
-            <button className="eco-filter px-3 py-1.5 border border-hair2 text-mute2 hover:text-bone mono text-[11px]" data-cat="perps">Perps <span className="text-mute2 ml-1">3</span></button>
-            <button className="eco-filter px-3 py-1.5 border border-hair2 text-mute2 hover:text-bone mono text-[11px]" data-cat="lst">LST <span className="text-mute2 ml-1">2</span></button>
-            <button className="eco-filter px-3 py-1.5 border border-hair2 text-mute2 hover:text-bone mono text-[11px]" data-cat="other">Other <span className="text-mute2 ml-1">5</span></button>
-            <div className="ml-auto mono text-[11px] text-mute">sort by · <span className="text-bone">shMON deployed</span> ↓</div>
-          </div>
-
-          <div>
-            <div className="grid grid-cols-12 mono-up text-mute py-3 hairline-b">
-              <div className="col-span-4">Protocol</div>
-              <div className="col-span-2">Category</div>
-              <div className="col-span-3">Integration</div>
-              <div className="col-span-2 text-right">shMON deployed</div>
-              <div className="col-span-1 text-right">APR</div>
-            </div>
-            <div id="eco-rows" />
-          </div>
-        </div>
-      </main>
-
       {/* FOOTER */}
-      <footer className="hairline-t mt-12">
-        <div className="max-w-[1480px] mx-auto px-6 lg:px-8 py-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3 mono text-[11px] text-mute">
-            <span className="relative w-4 h-4 bg-bone block">
-              <span className="absolute inset-0 bg-ink" style={{ clipPath: "polygon(0 100%, 100% 0, 100% 100%)" }} />
-            </span>
-            <span>shMonad v2.0.1</span>
-            <span className="text-mute">·</span>
-            <span>Built by <a href="/" className="hover:text-bone">Fastlane</a></span>
-            <span className="text-mute">·</span>
-            <span>0x4b…91Ae</span>
+      <footer className="hairline-t mt-[27rem]">
+        <div className="max-w-[1480px] mx-auto px-6 lg:px-8">
+          <div className="footer-canvas-wrap relative pt-8">
+            <MatrixCanvas words={SHMONAD_MATRIX_WORDS} font="grotesk" />
+            <div
+              className="absolute top-12 left-0 mono-up text-mute"
+              style={{ pointerEvents: "none" }}
+            >
+              FIG · RESOLVE
+            </div>
           </div>
-          <div className="flex items-center gap-5 mono text-[11px] text-mute2">
-            <a href="#" className="hover:text-bone">Docs</a>
-            <a href="#" className="hover:text-bone">Audits</a>
-            <a href="#" className="hover:text-bone">Analytics ↗</a>
-            <a href="#" className="hover:text-bone">Blog</a>
-            <a href="#" className="hover:text-bone">𝕏</a>
-            <a href="#" className="hover:text-bone">Discord</a>
-            <a href="#" className="hover:text-bone">GitHub</a>
+
+          <div className="py-8 flex flex-wrap items-center justify-between gap-4 hairline-t">
+            <div className="flex items-center gap-3 mono text-[11px] text-mute">
+              <span className="relative w-4 h-4 bg-bone block">
+                <span className="absolute inset-0 bg-ink" style={{ clipPath: "polygon(0 100%, 100% 0, 100% 100%)" }} />
+              </span>
+              <span>shMonad v2.0.1</span>
+              <span className="text-mute">·</span>
+              <span>Built by <a href="/" className="hover:text-bone">Fastlane</a></span>
+              <span className="text-mute">·</span>
+              <span>0x4b…91Ae</span>
+            </div>
+            <div className="flex items-center gap-5 mono text-[11px] text-mute2">
+              <a href="#" className="hover:text-bone">Docs</a>
+              <a href="#" className="hover:text-bone">Audits</a>
+              <a href="#" className="hover:text-bone">Analytics ↗</a>
+              <a href="#" className="hover:text-bone">Blog</a>
+              <a href="#" className="hover:text-bone">𝕏</a>
+              <a href="#" className="hover:text-bone">Discord</a>
+              <a href="#" className="hover:text-bone">GitHub</a>
+            </div>
           </div>
         </div>
       </footer>

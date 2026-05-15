@@ -114,6 +114,46 @@ body {
 .text-balance { text-wrap: balance; }
 .text-pretty { text-wrap: pretty; }
 
+/* ─────────────────────────────────────────────
+   DISPLAY-FACE OVERRIDE (Fastlane page)
+   Opt-in: when <html data-display="grotesk"> is set in layout.tsx,
+   every serif display class on the Fastlane page is repointed to
+   Space Grotesk and re-tuned (weight + tracking).
+
+   To activate: change `data-display="serif"` → `data-display="grotesk"`
+   in app/layout.tsx. The base rules above stay intact, so flipping
+   back to "serif" instantly restores Newsreader.
+   ───────────────────────────────────────────── */
+html[data-display="grotesk"] .font-serif,
+html[data-display="grotesk"] .serif-disp,
+html[data-display="grotesk"] .display,
+html[data-display="grotesk"] .metric-val,
+html[data-display="grotesk"] .pullquote {
+  font-family: var(--font-grotesk), "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: normal;
+}
+html[data-display="grotesk"] .serif-disp,
+html[data-display="grotesk"] .display {
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+html[data-display="grotesk"] .metric-val {
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+html[data-display="grotesk"] .pullquote {
+  font-weight: 400;
+  letter-spacing: -0.022em;
+}
+/* Space Grotesk has no italic — promote emphasis to weight + tighter tracking
+   so the existing <em> accents in headlines / pullquotes stay visible. */
+html[data-display="grotesk"] .display em,
+html[data-display="grotesk"] .pullquote em {
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
 /* Grain overlay */
 .grain::after {
   content: "";

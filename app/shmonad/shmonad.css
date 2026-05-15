@@ -88,6 +88,7 @@
 .shmonad-root .border-mute  { border-color: var(--sh-mute); }
 
 .shmonad-root .accent-lime  { accent-color: var(--sh-lime); }
+.shmonad-root .text-lime-fg { color: var(--sh-lime-fg); }
 
 /* Hairlines */
 .shmonad-root .hairline-b { border-bottom: 1px solid var(--sh-hair); }
@@ -99,8 +100,17 @@
 
 /* Typography utilities */
 .shmonad-root .serif {
-  font-family: var(--font-instrument-serif), "Instrument Serif", serif;
-  font-weight: 400;
+  font-family: var(--font-grotesk), "Space Grotesk", system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+/* `.serif italic` was used to call out display numerals — Space Grotesk has
+   no italic, so lean on weight + tighter tracking to keep the accent. */
+.shmonad-root .serif.italic,
+.shmonad-root .italic .serif {
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 .shmonad-root .mono {
   font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
@@ -127,7 +137,9 @@
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  transition: color 0.35s cubic-bezier(0.6, 0.2, 0.2, 1);
+  transition:
+    color 0.35s cubic-bezier(0.6, 0.2, 0.2, 1),
+    background-color 0.35s cubic-bezier(0.6, 0.2, 0.2, 1);
 }
 .shmonad-root .cta-fl .fl-fill {
   position: absolute;
@@ -139,6 +151,14 @@
 }
 .shmonad-root .cta-fl:hover .fl-fill { height: 100%; }
 .shmonad-root .cta-fl:hover { color: var(--sh-ink); }
+/* Filled-purple CTAs (e.g. the Stake/Unstake buttons) — hover deepens the
+   purple instead of inverting to bone. Staying inside the purple family
+   avoids the harsh white-flash edge against the dark page and keeps text
+   white (no low-contrast dark text on light bg). */
+.shmonad-root .cta-fl.bg-lime:hover {
+  background-color: var(--sh-lime2);
+  color: var(--sh-lime-fg);
+}
 .shmonad-root .cta-fl .fl-track {
   position: relative;
   display: inline-flex;
@@ -239,6 +259,31 @@
   border-color: var(--sh-lime) !important;
 }
 
+/* ─────────────────────────────────────────────
+   Hover utilities — the JSX uses Tailwind-style
+   `hover:text-bone` / `hover:bg-lime` / etc. but
+   our base color classes are scoped CSS so the
+   Tailwind hover variants don't compile. Define
+   the hover states explicitly inside our scope.
+   ───────────────────────────────────────────── */
+.shmonad-root [class*="hover:text-bone"]      { transition: color 180ms ease; }
+.shmonad-root [class*="hover:text-bone"]:hover { color: var(--sh-bone); }
+
+.shmonad-root [class*="hover:text-lime"]      { transition: color 180ms ease; }
+.shmonad-root [class*="hover:text-lime"]:hover { color: var(--sh-lime); }
+
+.shmonad-root [class*="hover:bg-ink"]:hover    { background-color: var(--sh-ink); }
+.shmonad-root [class*="hover:bg-ink2"]:hover   { background-color: var(--sh-ink2); }
+.shmonad-root [class*="hover:bg-ink3"]:hover   { background-color: var(--sh-ink3); }
+.shmonad-root [class*="hover:bg-lime"]:hover   {
+  background-color: var(--sh-lime);
+  color: var(--sh-lime-fg);
+}
+
+/* Footer link underline on hover, subtle visual cue */
+.shmonad-root footer a { transition: color 180ms ease; }
+.shmonad-root footer a:hover { color: var(--sh-bone); }
+
 .shmonad-root pre { white-space: pre; }
 
 /* The global universal transition (in globals.css) gets stuck on shMonad's
@@ -251,12 +296,73 @@
 .shmonad-root *::after {
   transition: none;
 }
-/* Keep the CTA inverse-fill animation working */
-.shmonad-root .cta-fl { transition: color 0.35s cubic-bezier(0.6, 0.2, 0.2, 1); }
+/* Keep the CTA inverse-fill / bg-swap animations working */
+.shmonad-root .cta-fl {
+  transition:
+    color 0.35s cubic-bezier(0.6, 0.2, 0.2, 1),
+    background-color 0.35s cubic-bezier(0.6, 0.2, 0.2, 1);
+}
 .shmonad-root .cta-fl .fl-fill { transition: height 0.35s cubic-bezier(0.6, 0.2, 0.2, 1); }
 .shmonad-root .cta-fl .fl-track > span { transition: transform 0.35s cubic-bezier(0.6, 0.2, 0.2, 1); }
 .shmonad-root .nav-link::after { transition: background 0.25s ease; }
 .shmonad-root .live-dot { animation: sh-pulse-dot 1.6s ease-in-out infinite; }
+
+/* ─────────────────────────────────────────────
+   Deposit-token dropdown — trigger, chevron, menu, options.
+   Editorial dark/hairline language with crisp open animation
+   and a moving-bar hover affordance on each option.
+   ───────────────────────────────────────────── */
+.shmonad-root .token-chevron {
+  transition: transform 200ms cubic-bezier(0.6, 0.2, 0.2, 1);
+}
+.shmonad-root .token-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.shmonad-root .token-menu {
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 220ms cubic-bezier(0.6, 0.2, 0.2, 1);
+}
+.shmonad-root .token-menu.is-open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.shmonad-root .token-option {
+  position: relative;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+.shmonad-root .token-option::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: var(--sh-lime);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 220ms cubic-bezier(0.6, 0.2, 0.2, 1);
+}
+.shmonad-root .token-option:hover {
+  background-color: var(--sh-ink2);
+}
+.shmonad-root .token-option:hover::before {
+  transform: scaleY(1);
+}
+.shmonad-root .token-option[aria-checked="true"]::before {
+  transform: scaleY(1);
+}
+.shmonad-root .token-option .token-check {
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+  color: transparent;
+}
+.shmonad-root .token-option .token-check.is-active {
+  background-color: var(--sh-lime);
+  border-color: var(--sh-lime);
+  color: var(--sh-lime-fg);
+}
 
 /* The grain overlay from the root layout interferes visually here — kill it */
 body.grain.shmonad-body::after { display: none; }

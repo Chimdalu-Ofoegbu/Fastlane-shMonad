@@ -3,7 +3,7 @@ import {
   Newsreader,
   Geist,
   JetBrains_Mono,
-  Instrument_Serif,
+  Space_Grotesk,
 } from "next/font/google";
 import "./globals.css";
 
@@ -15,11 +15,10 @@ const newsreader = Newsreader({
   display: "swap",
 });
 
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-instrument-serif",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-grotesk",
   subsets: ["latin"],
-  weight: ["400"],
-  style: ["normal", "italic"],
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -51,11 +50,22 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // ───────────────────────────────────────────────
+  // DISPLAY-FACE TOGGLE (Fastlane landing + Fastlane footer dot-matrix).
+  //   "grotesk" → Space Grotesk display headlines.
+  //   "serif"   → original Newsreader serif (current).
+  // Flip this single constant to swap the Fastlane page's display face.
+  // (The shMonad page is locked to Grotesk independently and is not
+  // affected by this toggle.)
+  // ───────────────────────────────────────────────
+  const displayFace: "grotesk" | "serif" = "serif";
+
   return (
     <html
       lang="en"
       data-theme="light"
-      className={`${newsreader.variable} ${geist.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable}`}
+      data-display={displayFace}
+      className={`${newsreader.variable} ${geist.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable}`}
       suppressHydrationWarning
     >
       <head>

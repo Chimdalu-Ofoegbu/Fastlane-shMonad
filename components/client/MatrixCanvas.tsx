@@ -10,10 +10,29 @@ const DAMP = 0.80;
 
 type Phase = "forming" | "holding" | "dispersing";
 
-const WORDS = ["FASTLANE", "SHMONAD"] as const;
+const DEFAULT_WORDS = ["FASTLANE", "SHMONAD"];
 
-export default function MatrixCanvas() {
+/**
+ * font prop:
+ *   "grotesk" → always Space Grotesk (used by shMonad — locked).
+ *   "serif"   → always Newsreader.
+ *   "toggle"  → follow <html data-display> (used by Fastlane footer so the
+ *               matrix participates in the global display-face toggle).
+ */
+type FontMode = "grotesk" | "serif" | "toggle";
+
+type Props = {
+  words?: readonly string[];
+  font?: FontMode;
+};
+
+export default function MatrixCanvas({ words, font = "toggle" }: Props = {}) {
   const ref = useRef<HTMLCanvasElement | null>(null);
+  // Capture once on mount; words prop is treated as static for this component.
+  const wordsRef = useRef<readonly string[]>(
+    words && words.length > 0 ? words : DEFAULT_WORDS
+  );
+  const fontModeRef = useRef<FontMode>(font);
 
   useEffect(() => {
     const c = ref.current;
@@ -77,7 +96,29 @@ export default function MatrixCanvas() {
       octx.fillStyle = "#000";
       octx.fillRect(0, 0, w, oh);
       octx.fillStyle = "#fff";
-      octx.font = `500 ${fontSize}px "Newsreader", serif`;
+      // Resolve which display face to rasterize this frame's word mask in.
+      const cs = getComputedStyle(document.documentElement);
+      const mode: FontMode =
+        fontModeRef.current === "toggle"
+          ? document.documentElement.getAttribute("data-display") === "grotesk"
+            ? "grotesk"
+            : "serif"
+          : fontModeRef.current;
+      let fontStack: string;
+      let weight = 600;
+      if (mode === "serif") {
+        const newsreaderVar = cs.getPropertyValue("--font-newsreader").trim();
+        fontStack = newsreaderVar
+          ? `${newsreaderVar}, "Newsreader", serif`
+          : `"Newsreader", serif`;
+        weight = 500;
+      } else {
+        const groteskVar = cs.getPropertyValue("--font-grotesk").trim();
+        fontStack = groteskVar
+          ? `${groteskVar}, "Space Grotesk", system-ui, sans-serif`
+          : `"Space Grotesk", system-ui, sans-serif`;
+      }
+      octx.font = `${weight} ${fontSize}px ${fontStack}`;
       octx.textBaseline = "middle";
       octx.textAlign = "center";
       // @ts-expect-error letterSpacing is not in TS lib yet
@@ -99,16 +140,17 @@ export default function MatrixCanvas() {
 
     function init() {
       measure();
+      const wordList = wordsRef.current;
       // Build the larger target set first so the dot array can hold the
       // max number we'll ever need across all words. Reset wordIdx to 0.
       wordIdx = 0;
       // Find max target count across all words to size the dot array.
       let maxCount = 0;
-      for (const word of WORDS) {
+      for (const word of wordList) {
         buildTargets(word);
         if (targets.length > maxCount) maxCount = targets.length;
       }
-      buildTargets(WORDS[0]);
+      buildTargets(wordList[0]);
       dots = new Array(maxCount).fill(0).map((_, i) => {
         const t = targets[i % targets.length];
         return {
@@ -135,8 +177,9 @@ export default function MatrixCanvas() {
     }
 
     function retargetWord() {
-      wordIdx = (wordIdx + 1) % WORDS.length;
-      buildTargets(WORDS[wordIdx]);
+      const wordList = wordsRef.current;
+      wordIdx = (wordIdx + 1) % wordList.length;
+      buildTargets(wordList[wordIdx]);
       for (let i = 0; i < dots.length; i++) {
         const t = targets[i % targets.length];
         if (!t) continue;
