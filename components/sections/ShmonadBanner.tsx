@@ -14,7 +14,6 @@ export default function ShmonadBanner() {
               "radial-gradient(80% 80% at 85% 60%, rgba(230, 90, 60, 0.18) 0%, rgba(230, 90, 60, 0) 55%)," +
               "linear-gradient(95deg, #0c0414 0%, #170725 45%, #0a0312 100%)",
             border: "1px solid rgba(97, 5, 255, 0.25)",
-            borderRadius: 6,
           }}
         >
           {/* Left decorative icon */}
@@ -54,17 +53,17 @@ export default function ShmonadBanner() {
             }}
           />
 
-          <div className="relative z-10 text-center px-8 py-12 max-w-[640px]">
+          <div className="relative z-10 text-center px-5 md:px-10 py-12 max-w-[960px]">
             <h2
-              className="text-balance"
               style={{
                 fontFamily: "var(--font-geist), sans-serif",
                 fontWeight: 700,
-                fontSize: "clamp(32px, 4.4vw, 56px)",
+                fontSize: "clamp(20px, 4.6vw, 56px)",
                 lineHeight: 1.08,
                 letterSpacing: "-0.02em",
                 color: "#ffffff",
                 margin: 0,
+                whiteSpace: "nowrap",
               }}
             >
               Get{" "}
@@ -72,7 +71,7 @@ export default function ShmonadBanner() {
               {" "}with shMonad
             </h2>
             <p
-              className="text-balance"
+              className="font-serif text-balance"
               style={{
                 color: "rgba(255, 255, 255, 0.78)",
                 fontSize: 16,
@@ -84,23 +83,11 @@ export default function ShmonadBanner() {
             </p>
             <a
               href="/shmonad"
-              className="banner-cta"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                marginTop: 28,
-                background: "#ffffff",
-                color: "#0c0414",
-                borderRadius: 999,
-                padding: "12px 32px",
-                fontSize: 14,
-                fontWeight: 500,
-                letterSpacing: "0.01em",
-                textDecoration: "none",
-                transition: "transform 200ms cubic-bezier(.2,.7,0,1), background 200ms ease",
-              }}
+              className="cta cta-signal"
+              style={{ marginTop: 28 }}
             >
-              Stake Now
+              <span className="label">Stake Now</span>
+              <span className="arr">↗</span>
             </a>
           </div>
         </div>

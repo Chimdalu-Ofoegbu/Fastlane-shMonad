@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>shMonad · Token Fall · Sandbox</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a09; color: #f5f4ee; font-family: ui-sans-serif, system-ui, sans-serif; }
+    canvas { display: block; width: 100% !important; height: 100% !important; }
+    #ui {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      font-family: ui-monospace, "JetBrains Mono", Menlo, monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      line-height: 1.6;
+      max-width: 320px;
+    }
+    #ui .label { color: #9e9c91; text-transform: uppercase; }
+    #ui .row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    #ui input[type="range"] { width: 140px; accent-color: #6105FF; }
+    #ui input[type="color"] { width: 28px; height: 22px; border: 1px solid #2a2924; background: transparent; cursor: pointer; }
+    #ui .val { color: #f5f4ee; min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+    #ui .header { font-size: 13px; color: #f5f4ee; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #2a2924; }
+    #ui .header small { color: #76746b; display: block; margin-top: 2px; }
+    #ui hr { border: 0; border-top: 1px solid #1f1e1a; margin: 12px 0; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div class="header">
+      shMonad · Token Fall · v2 — realistic pool
+      <small>open in any browser · refresh after edits</small>
+    </div>
+    <div class="row"><span class="label">Speed</span><input id="speed" type="range" min="0.4" max="3" step="0.05" value="1.2" /><span class="val" id="speedVal">1.20</span></div>
+    <div class="row"><span class="label">Spin</span><input id="spin" type="range" min="0" max="3" step="0.05" value="0.8" /><span class="val" id="spinVal">0.80</span></div>
+    <div class="row"><span class="label">Count</span><input id="count" type="range" min="1" max="8" step="1" value="3" /><span class="val" id="countVal">3</span></div>
+    <div class="row"><span class="label">Tilt</span><input id="tilt" type="range" min="0" max="80" step="1" value="35" /><span class="val" id="tiltVal">35°</span></div>
+    <div class="row"><span class="label">Choppiness</span><input id="chop" type="range" min="0" max="2" step="0.05" value="1" /><span class="val" id="chopVal">1.00</span></div>
+    <hr />
+    <div class="row"><span class="label">Token</span><input id="cTok" type="color" value="#6105FF" /></div>
+    <div class="row"><span class="label">Pool</span><input id="cPool" type="color" value="#4A03C2" /></div>
+    <div class="row"><span class="label">Bg</span><input id="cBg" type="color" value="#0a0a09" /></div>
+  </div>
+
+  <script type="importmap">
+  { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    // ─── Scene / Camera / Renderer ──────────────────────────────────
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a09);
+    scene.fog = new THREE.FogExp2(0x0a0a09, 0.055);
+
+    const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 4.5, 11);
+    camera.lookAt(0, -1, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    document.body.appendChild(renderer.domElement);
+
+    // ─── Lights (for the tokens — MeshStandard) ─────────────────────
+    scene.add(new THREE.AmbientLight(0x6b5ce8, 0.35));
+    const key = new THREE.DirectionalLight(0xffffff, 1.4);
+    key.position.set(3, 6, 4);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(0xa080ff, 0.8);
+    rim.position.set(-3, 2, -2);
+    scene.add(rim);
+    const fill = new THREE.PointLight(0x6105FF, 1.2, 16);
+    fill.position.set(0, -1, 2);
+    scene.add(fill);
+
+    // ─── Token geometry: circular outer + hexagonal hole ────────────
+    function makeTokenGeometry() {
+      const outerRadius = 1.0;
+      const hexRadius = 0.5;
+      const shape = new THREE.Shape();
+      shape.absarc(0, 0, outerRadius, 0, Math.PI * 2, false);
+      const hex = new THREE.Path();
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+        const x = Math.cos(a) * hexRadius;
+        const y = Math.sin(a) * hexRadius;
+        if (i === 0) hex.moveTo(x, y);
+        else hex.lineTo(x, y);
+      }
+      hex.closePath();
+      shape.holes.push(hex);
+      return new THREE.ExtrudeGeometry(shape, {
+        depth: 0.22,
+        bevelEnabled: true,
+        bevelThickness: 0.06,
+        bevelSize: 0.06,
+        bevelSegments: 6,
+        curveSegments: 64,
+      });
+    }
+    const tokenGeo = makeTokenGeometry();
+    tokenGeo.center();
+
+    function makeMaterial(hex) {
+      return new THREE.MeshStandardMaterial({
+        color: new THREE.Color(hex),
+        roughness: 0.32,
+        metalness: 0.15,
+        emissive: new THREE.Color(hex).multiplyScalar(0.06),
+      });
+    }
+
+    // ─── Realistic pool ─────────────────────────────────────────────
+    const POOL_Y = -2;
+    const poolRadius = 6;
+    const MAX_IMPACTS = 8;
+
+    // Floor disc beneath the surface — gives the pool perceived depth.
+    const floorGeo = new THREE.CircleGeometry(poolRadius * 1.02, 96);
+    const floorMat = new THREE.MeshBasicMaterial({ color: 0x12003a });
+    const poolFloor = new THREE.Mesh(floorGeo, floorMat);
+    poolFloor.rotation.x = -Math.PI / 2;
+    poolFloor.position.y = POOL_Y - 0.55;
+    scene.add(poolFloor);
+
+    // Impact ring buffer — each entry: vec3(localX, localY, startTime)
+    // startTime < 0 means the slot is inactive.
+    const impacts = Array.from({ length: MAX_IMPACTS }, () => new THREE.Vector3(0, 0, -1));
+    let impactCursor = 0;
+
+    const poolUniforms = {
+      uTime:        { value: 0 },
+      uChop:        { value: 1.0 },
+      uPoolRadius:  { value: poolRadius },
+      uColorDeep:   { value: new THREE.Color(0x2a0170) },
+      uColorCrest:  { value: new THREE.Color(0x8a4dff) },
+      uCamPos:      { value: new THREE.Vector3() },
+      uImpacts:     { value: impacts },
+    };
+
+    const poolVert = `
+      uniform float uTime;
+      uniform float uChop;
+      uniform vec3  uImpacts[${MAX_IMPACTS}];
+      varying float vHeight;
+      varying vec3  vWorldPos;
+      varying vec3  vNormal;
+
+      // Height of the water surface at local plane coord p.
+      float waveHeight(vec2 p) {
+        float h = 0.0;
+        // ambient layered swell
+        h += sin(p.x * 1.2 + uTime * 0.9) * 0.060;
+        h += sin(p.y * 1.5 - uTime * 1.1) * 0.050;
+        h += sin((p.x + p.y) * 0.8 + uTime * 0.7) * 0.040;
+        h += sin((p.x - p.y) * 2.1 + uTime * 1.6) * 0.022;
+        h *= uChop;
+        // impact ripples — expanding damped sine rings
+        for (int i = 0; i < ${MAX_IMPACTS}; i++) {
+          float st = uImpacts[i].z;
+          if (st < 0.0) continue;
+          float age = uTime - st;
+          if (age < 0.0 || age > 2.6) continue;
+          vec2  c   = uImpacts[i].xy;
+          float d   = distance(p, c);
+          float ring = age * 3.4;                    // ripple front expands
+          float fade = exp(-age * 1.35);             // decays over time
+          float wave = sin((d - ring) * 3.0) * exp(-abs(d - ring) * 1.5);
+          h += wave * fade * 0.36;
+        }
+        return h;
+      }
+
+      void main() {
+        vec2 p = position.xy;
+        float h = waveHeight(p);
+        // analytic-ish normal from finite differences
+        float e = 0.12;
+        float hX = waveHeight(p + vec2(e, 0.0));
+        float hZ = waveHeight(p + vec2(0.0, e));
+        vec3 n = normalize(vec3(-(hX - h) / e, 1.0, -(hZ - h) / e));
+
+        vec3 displaced = vec3(position.x, position.y, h);
+        vec4 world = modelMatrix * vec4(displaced, 1.0);
+        vWorldPos = world.xyz;
+        vHeight = h;
+        // surface lies in XZ after the mesh rotation — pass the world-space normal
+        vNormal = normalize(mat3(modelMatrix) * n);
+
+        gl_Position = projectionMatrix * viewMatrix * world;
+      }
+    `;
+
+    const poolFrag = `
+      uniform float uPoolRadius;
+      uniform vec3  uColorDeep;
+      uniform vec3  uColorCrest;
+      uniform vec3  uCamPos;
+      uniform float uTime;
+      varying float vHeight;
+      varying vec3  vWorldPos;
+      varying vec3  vNormal;
+
+      void main() {
+        // circular mask — fade alpha toward the rim
+        float r = length(vWorldPos.xz);
+        float alpha = 1.0 - smoothstep(uPoolRadius - 0.5, uPoolRadius, r);
+        if (alpha <= 0.001) discard;
+
+        vec3 N = normalize(vNormal);
+        vec3 V = normalize(uCamPos - vWorldPos);
+        vec3 L = normalize(vec3(0.4, 1.0, 0.55));
+
+        // fresnel — rim of the pool + glancing crests catch light
+        float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+        // soft diffuse
+        float diff = max(dot(N, L), 0.0);
+        // sharp specular glint
+        vec3  H = normalize(L + V);
+        float spec = pow(max(dot(N, H), 0.0), 90.0);
+
+        // crest-lit colour: wave peaks lean toward the crest colour
+        float hf = clamp(vHeight * 3.4 + 0.45, 0.0, 1.0);
+        vec3 col = mix(uColorDeep, uColorCrest, hf);
+        col += diff * 0.22 * uColorCrest;
+        col += fres * 0.70 * uColorCrest;
+        col += spec * 0.85;
+
+        // faint drifting caustic shimmer
+        float caustic = sin(vWorldPos.x * 3.0 + uTime) * sin(vWorldPos.z * 3.0 - uTime * 0.8);
+        col += max(caustic, 0.0) * 0.05 * uColorCrest;
+
+        gl_FragColor = vec4(col, alpha);
+      }
+    `;
+
+    const poolMat = new THREE.ShaderMaterial({
+      uniforms: poolUniforms,
+      vertexShader: poolVert,
+      fragmentShader: poolFrag,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+
+    // Dense plane — circular shape handled by the fragment mask.
+    const poolGeo = new THREE.PlaneGeometry(poolRadius * 2.3, poolRadius * 2.3, 150, 150);
+    const pool = new THREE.Mesh(poolGeo, poolMat);
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.y = POOL_Y;
+    scene.add(pool);
+
+    // Rim glow ring around the pool edge.
+    const rimGeo = new THREE.RingGeometry(poolRadius * 0.99, poolRadius * 1.07, 96);
+    const rimMat = new THREE.MeshBasicMaterial({ color: 0x6105FF, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+    const poolRim = new THREE.Mesh(rimGeo, rimMat);
+    poolRim.rotation.x = -Math.PI / 2;
+    poolRim.position.y = POOL_Y + 0.01;
+    scene.add(poolRim);
+
+    // Crisp foam ring meshes — spawned on impact, on top of the geometry waves.
+    const foam = [];
+    function spawnImpact(worldX, worldZ) {
+      // register a geometry ripple (convert world XZ → pool-local plane XY)
+      impacts[impactCursor].set(worldX, worldZ, poolUniforms.uTime.value);
+      impactCursor = (impactCursor + 1) % MAX_IMPACTS;
+      // crisp foam highlight ring
+      const g = new THREE.RingGeometry(0.05, 0.13, 64);
+      const m = new THREE.MeshBasicMaterial({ color: 0xb89bff, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+      const f = new THREE.Mesh(g, m);
+      f.rotation.x = -Math.PI / 2;
+      f.position.set(worldX, POOL_Y + 0.04, worldZ);
+      f.userData.age = 0;
+      scene.add(f);
+      foam.push(f);
+    }
+
+    // ─── Token instances ────────────────────────────────────────────
+    const TOP_Y = 4.5;
+    const tokens = [];
+    function makeToken(material) {
+      const m = new THREE.Mesh(tokenGeo, material);
+      m.userData = {
+        spinAxis: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize(),
+        sinking: false,
+        sinkT: 0,
+      };
+      m.rotation.x = Math.random() * Math.PI;
+      m.rotation.z = Math.random() * Math.PI;
+      return m;
+    }
+
+    let material = makeMaterial(0x6105FF);
+    let desiredCount = 3;
+    function rebuildTokens() {
+      for (const t of tokens) scene.remove(t);
+      tokens.length = 0;
+      for (let i = 0; i < desiredCount; i++) {
+        const t = makeToken(material);
+        const span = TOP_Y - POOL_Y;
+        t.position.set(0, TOP_Y - (i / desiredCount) * span, 0);
+        scene.add(t);
+        tokens.push(t);
+      }
+    }
+    rebuildTokens();
+
+    // ─── UI Controls ────────────────────────────────────────────────
+    const $ = (id) => document.getElementById(id);
+    const state = { speed: 1.2, spin: 0.8, tilt: 35 };
+    function setVal(id, v, suffix = '') { $(id + 'Val').textContent = v + suffix; }
+
+    $('speed').oninput = (e) => { state.speed = +e.target.value; setVal('speed', state.speed.toFixed(2)); };
+    $('spin').oninput  = (e) => { state.spin  = +e.target.value; setVal('spin', state.spin.toFixed(2)); };
+    $('tilt').oninput  = (e) => { state.tilt  = +e.target.value; setVal('tilt', state.tilt, '°'); applyTilt(); };
+    $('count').oninput = (e) => { desiredCount = +e.target.value; setVal('count', desiredCount); rebuildTokens(); };
+    $('chop').oninput  = (e) => { poolUniforms.uChop.value = +e.target.value; setVal('chop', (+e.target.value).toFixed(2)); };
+
+    $('cTok').oninput = (e) => {
+      material = makeMaterial(e.target.value);
+      for (const t of tokens) t.material = material;
+    };
+    $('cPool').oninput = (e) => {
+      const base = new THREE.Color(e.target.value);
+      poolUniforms.uColorDeep.value.copy(base).multiplyScalar(0.55);
+      poolUniforms.uColorCrest.value.copy(base).lerp(new THREE.Color(0xffffff), 0.4);
+      floorMat.color.copy(base).multiplyScalar(0.28);
+      rimMat.color.copy(base).lerp(new THREE.Color(0xffffff), 0.2);
+    };
+    $('cBg').oninput = (e) => {
+      scene.background.set(e.target.value);
+      scene.fog.color.set(e.target.value);
+    };
+
+    function applyTilt() {
+      const t = (state.tilt * Math.PI) / 180;
+      const dist = 11;
+      camera.position.set(0, dist * Math.sin(t), dist * Math.cos(t));
+      camera.lookAt(0, -1, 0);
+    }
+    applyTilt();
+
+    // ─── Animation loop ─────────────────────────────────────────────
+    const clock = new THREE.Clock();
+    function tick() {
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const time = clock.elapsedTime;
+
+      poolUniforms.uTime.value = time;
+      poolUniforms.uCamPos.value.copy(camera.position);
+      poolRim.material.opacity = 0.45 + Math.sin(time * 2.0) * 0.14;
+
+      for (const t of tokens) {
+        if (!t.userData.sinking) {
+          t.position.y -= state.speed * dt;
+          t.rotateOnAxis(t.userData.spinAxis, state.spin * dt);
+          if (t.position.y <= POOL_Y + 0.12) {
+            t.userData.sinking = true;
+            t.userData.sinkT = 0;
+            spawnImpact(t.position.x, t.position.z);
+          }
+        } else {
+          t.userData.sinkT += dt;
+          const k = t.userData.sinkT / 0.4;
+          t.position.y = POOL_Y + 0.12 - k * 0.7;
+          t.scale.setScalar(Math.max(0.05, 1 - k));
+          if (k >= 1) {
+            t.userData.sinking = false;
+            t.userData.sinkT = 0;
+            t.scale.setScalar(1);
+            t.position.y = TOP_Y;
+            t.userData.spinAxis.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+            t.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+          }
+        }
+      }
+
+      // foam rings expand + fade
+      for (let i = foam.length - 1; i >= 0; i--) {
+        const f = foam[i];
+        f.userData.age += dt;
+        const k = f.userData.age / 1.0;
+        f.scale.setScalar(1 + k * 14);
+        f.material.opacity = Math.max(0, 0.7 * (1 - k));
+        if (k >= 1) {
+          scene.remove(f);
+          f.geometry.dispose();
+          f.material.dispose();
+          foam.splice(i, 1);
+        }
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(tick);
+    }
+    tick();
+
+    addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

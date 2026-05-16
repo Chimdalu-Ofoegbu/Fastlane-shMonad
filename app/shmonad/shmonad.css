@@ -217,29 +217,76 @@
   to   { opacity: 1; transform: none; }
 }
 
-/* Range slider */
+/* Range slider — input is sized to the thumb height (18px) so the thumb fills
+   the input naturally (no margin-top offset math needed). The visible 4px
+   two-tone track is rendered as a `background-size: 100% 4px` gradient
+   centered vertically inside the 18px input. */
 .shmonad-root input[type="range"].lime-slider {
   -webkit-appearance: none;
-  height: 2px;
-  background: var(--sh-hair2);
+  appearance: none;
+  height: 18px;
+  background-color: transparent;
+  background-image: linear-gradient(
+    to right,
+    var(--sh-lime) 0%,
+    var(--sh-lime) var(--slider-fill, 13.3%),
+    var(--sh-hair2) var(--slider-fill, 13.3%),
+    var(--sh-hair2) 100%
+  );
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 4px;
   outline: none;
+  cursor: pointer;
+  padding: 0;
+}
+/* Webkit track is transparent — the gradient on the <input> renders the
+   visible 4px bar centered vertically. */
+.shmonad-root input[type="range"].lime-slider::-webkit-slider-runnable-track {
+  height: 18px;
+  background: transparent;
+  border: none;
 }
 .shmonad-root input[type="range"].lime-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
-  background: var(--sh-lime);
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  background: var(--sh-bone);
+  border: 1.5px solid var(--sh-ink);
+  border-radius: 50%;
   cursor: pointer;
-  border-radius: 0;
+  box-shadow: 0 0 0 1px var(--sh-hair2);
+  transition: transform 160ms cubic-bezier(0.6, 0.2, 0.2, 1);
+}
+.shmonad-root input[type="range"].lime-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+.shmonad-root input[type="range"].lime-slider::-webkit-slider-thumb:active {
+  transform: scale(1.15);
+}
+.shmonad-root input[type="range"].lime-slider::-moz-range-track {
+  height: 18px;
+  background: transparent;
+  border: none;
 }
 .shmonad-root input[type="range"].lime-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  background: var(--sh-lime);
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  background: var(--sh-bone);
+  border: 1.5px solid var(--sh-ink);
+  border-radius: 50%;
   cursor: pointer;
-  border: 0;
-  border-radius: 0;
+  box-shadow: 0 0 0 1px var(--sh-hair2);
+  transition: transform 160ms cubic-bezier(0.6, 0.2, 0.2, 1);
+}
+.shmonad-root input[type="range"].lime-slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+}
+.shmonad-root input[type="range"].lime-slider::-moz-range-thumb:active {
+  transform: scale(1.15);
 }
 
 /* Scrollbar hide */
@@ -360,6 +407,37 @@
   background-color: var(--sh-lime);
   border-color: var(--sh-lime);
   color: var(--sh-lime-fg);
+}
+
+/* ─────────────────────────────────────────────
+   Policy selector — trigger hover + dropdown menu animation
+   ───────────────────────────────────────────── */
+.shmonad-root .policy-trigger {
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+.shmonad-root .policy-trigger:hover {
+  background-color: var(--sh-ink3);
+  border-color: var(--sh-mute2);
+}
+.shmonad-root .policy-trigger:hover .policy-chevron {
+  transform: translateX(2px);
+}
+.shmonad-root .policy-chevron {
+  transition: transform 200ms cubic-bezier(0.6, 0.2, 0.2, 1);
+}
+/* When the menu is open, chevron rotates 90° (pointing down) — that takes
+   precedence over the hover translateX since rotate(90deg) overrides. */
+
+.shmonad-root .policy-menu {
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 220ms cubic-bezier(0.6, 0.2, 0.2, 1);
+}
+.shmonad-root .policy-menu.is-open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 /* The grain overlay from the root layout interferes visually here — kill it */

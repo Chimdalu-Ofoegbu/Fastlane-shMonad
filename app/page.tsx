@@ -8,10 +8,12 @@ import CTA from "@/components/sections/CTA";
 import Footer from "@/components/sections/Footer";
 import LiveTickers from "@/components/client/LiveTickers";
 import RiseObserver from "@/components/client/RiseObserver";
+import Preloader from "@/components/client/Preloader";
 
 export default function Home() {
   return (
     <>
+      <Preloader />
       <Nav />
       <Hero />
       <Thesis />

@@ -28,6 +28,25 @@ export default function ShmonadPage() {
   // Degen Pool Details — collapsible state. Defaults to open since the
   // copy is informational and useful to show on first visit.
   const [degenDetailsOpen, setDegenDetailsOpen] = useState(true);
+  // RPC "Select a Policy" dropdown
+  const [policyMenuOpen, setPolicyMenuOpen] = useState(false);
+  const policyMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!policyMenuOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (!policyMenuRef.current) return;
+      if (!policyMenuRef.current.contains(e.target as Node)) setPolicyMenuOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setPolicyMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [policyMenuOpen]);
   useEffect(() => {
     const onHash = () => setActiveRoute(window.location.hash || "#/stake");
     window.addEventListener("hashchange", onHash);
@@ -190,15 +209,15 @@ export default function ShmonadPage() {
     const dur = document.getElementById("durDays");
     const gas = document.getElementById("gasBudget");
     const rateLimitVal = document.getElementById("rateLimitVal");
-    // Map slider value (7..180) → tier → rate limit per minute.
-    // Thresholds are positioned midway between the four tier labels under the
-    // slider (Builder / Pro / Infra Operator / Enterprise, spaced via
-    // justify-between over the 7..180 range).
-    function tierPerMinForDays(days: number): number {
-      if (days < 36) return 600;     // Builder · 10 req/sec
-      if (days < 94) return 1500;    // Pro · 25 req/sec
-      if (days < 152) return 3000;   // Infra Operator · 50 req/sec
-      return 6000;                   // Enterprise · 100 req/sec
+    const rateLimitReq = document.getElementById("rateLimitReq");
+    // Continuous interpolation:
+    //   perMin = days × 45.467  (matches "23 req/sec (1364 Per Min)" at 30 days)
+    //   reqSec = ceil(perMin / 60)
+    function perMinForDays(days: number): number {
+      return Math.round(days * 45.467);
+    }
+    function reqSecForDays(days: number): number {
+      return Math.ceil(perMinForDays(days) / 60);
     }
     function recalcRpc() {
       if (!rpcInput) return;
@@ -210,8 +229,9 @@ export default function ShmonadPage() {
         .forEach((el) => { el.textContent = amt; });
       const d = parseInt(range?.value || "30");
       if (dur) dur.textContent = String(d);
-      // Slider tier → rate limit per minute callout.
-      if (rateLimitVal) rateLimitVal.textContent = tierPerMinForDays(d).toLocaleString();
+      // Continuous rate-limit callout (per-min + req/sec).
+      if (rateLimitVal) rateLimitVal.textContent = perMinForDays(d).toLocaleString();
+      if (rateLimitReq) rateLimitReq.textContent = String(reqSecForDays(d));
       const txPerShMon = 59.4;
       const txTotal = Math.round(v * txPerShMon);
       if (gas)
@@ -353,12 +373,9 @@ export default function ShmonadPage() {
           .map(
             (x) => `
             <div class="lb-row grid grid-cols-12 py-3.5 hairline-b text-[13.5px] hover:bg-ink2 transition cursor-pointer">
-              <div class="col-span-1 mono text-mute tnum">${String(x.r).padStart(2, "0")}</div>
-              <div class="col-span-4 mono text-bone">${x.addr}</div>
-              <div class="col-span-2"><span class="mono text-[11px] px-2 py-0.5 border border-hair2 text-bone2">${clsMap[x.cls]}</span></div>
-              <div class="col-span-2 text-right mono tnum text-bone2">${x.s}</div>
-              <div class="col-span-2 text-right mono tnum text-lime">${x.p}</div>
-              <div class="col-span-1 text-right mono tnum text-mute2">${x.d}</div>
+              <div class="col-span-1 mono text-mute2 tnum">${String(x.r).padStart(2, "0")}</div>
+              <div class="col-span-7 mono text-bone">${x.addr}</div>
+              <div class="col-span-4 text-right mono tnum text-bone font-medium">${x.p}</div>
             </div>`
           )
           .join("");
@@ -368,11 +385,11 @@ export default function ShmonadPage() {
           document
             .querySelectorAll<HTMLButtonElement>(".shmonad-root .lb-filter")
             .forEach((x) => {
-              x.classList.remove("border-lime", "text-lime");
+              x.classList.remove("border-lime", "text-bone");
               x.classList.add("border-hair2", "text-mute2");
             });
           b.classList.remove("border-hair2", "text-mute2");
-          b.classList.add("border-lime", "text-lime");
+          b.classList.add("border-lime", "text-bone");
           renderLb(b.dataset.filter || "all");
         });
       });
@@ -468,25 +485,12 @@ export default function ShmonadPage() {
 
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <button id="connectBtn" className="cta-fl inline-flex items-center gap-2 px-4 h-[36px] border border-bone text-bone text-[12.5px] font-medium">
+            <button id="connectBtn" className="cta-fl inline-flex items-center gap-2 px-4 h-[36px] bg-lime border border-lime text-lime-fg text-[12.5px] font-medium">
               <span className="fl-track"><span>Connect wallet</span><span>Connect wallet</span></span>
-              <span className="fl-fill" />
             </button>
           </div>
         </div>
       </header>
-
-      {/* Page-level stats strip — moved out of the sticky <header> so it
-          reads as a distinct section below the nav, with breathing room
-          above and no connecting hairline. Hidden on the RPC and Degen
-          pages where the page-specific layout takes over. */}
-      <div className={`${(activeRoute.startsWith("#/rpc") || activeRoute.startsWith("#/degen")) ? "hidden" : "hidden md:block"} mt-10 lg:mt-[144px]`}>
-        <div className="max-w-[1480px] mx-auto px-6 lg:px-8 flex items-start justify-center gap-24 lg:gap-32 mono text-[15px]">
-          <div className="flex flex-col items-start gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>TVL</span> <span className="tnum text-bone font-bold text-[32px] leading-none">$412.8M</span></div>
-          <div className="flex flex-col items-start gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>APY</span> <span className="tnum text-bone font-bold text-[32px] leading-none">20.54%</span></div>
-          <div className="flex flex-col items-start gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>HOLDERS</span> <span className="tnum text-bone font-bold text-[32px] leading-none">2,968</span></div>
-        </div>
-      </div>
 
       {/* PAGE: STAKE */}
       <main id="page-stake" className="page">
@@ -829,13 +833,114 @@ export default function ShmonadPage() {
                 <button className="flex-1 py-3.5 mono-up text-mute hover:text-bone">Uncommit</button>
               </div>
 
+              {/* Policy selector — click to open the "Select a Policy" dropdown.
+                  Hover lifts the bg slightly + nudges the chevron right; click
+                  opens an absolute-positioned menu below with the single
+                  available policy ("Fastlane RPC"). */}
+              <div ref={policyMenuRef} className="relative mt-4 mx-7 lg:mx-9">
+                <button
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={policyMenuOpen}
+                  onClick={() => setPolicyMenuOpen((v) => !v)}
+                  className="policy-trigger w-full border border-hair2 flex items-center justify-between bg-ink2 px-5 h-[52px] transition"
+                >
+                  <span className="text-bone text-[14px] font-medium">Fastlane RPC</span>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                    aria-hidden="true"
+                    className="text-mute2 policy-chevron"
+                    style={{
+                      transform: policyMenuOpen ? "rotate(90deg)" : "rotate(0deg)",
+                    }}
+                  >
+                    <path d="M5 3 L9 7 L5 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                  </svg>
+                </button>
+
+                <div
+                  role="menu"
+                  aria-hidden={!policyMenuOpen}
+                  className={`policy-menu absolute left-0 right-0 top-[calc(100%+8px)] z-20 border border-hair2 bg-ink shadow-2xl ${policyMenuOpen ? "is-open" : ""}`}
+                >
+                  {/* Menu header */}
+                  <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
+                    <span className="mono-up text-bone2" style={{ fontSize: 13 }}>Select a Policy</span>
+                    <button
+                      type="button"
+                      aria-label="Close"
+                      onClick={() => setPolicyMenuOpen(false)}
+                      className="text-mute2 hover:text-bone transition"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                        <path d="M3 3 L11 11 M11 3 L3 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Policy card — only one option, already selected */}
+                  <div className="p-5">
+                    <div className="border border-lime bg-ink2 p-5">
+                      {/* Top-row chips: "For Users" + "New" */}
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="inline-flex items-center px-2 py-0.5 bg-ink3 border border-hair2 mono-up text-bone2" style={{ fontSize: 10 }}>For Users</span>
+                        <span className="inline-flex items-center px-2 py-0.5 bg-lime text-lime-fg mono-up font-bold" style={{ fontSize: 10 }}>New</span>
+                      </div>
+
+                      <div className="text-bone text-[15px] font-medium mb-1.5">Fastlane RPC</div>
+
+                      <p className="mono text-[12px] text-bone2 leading-[1.65] mb-4">
+                        Unlock dedicated RPC access for your blockchain interactions. Rate limits scale with the amount of shMON committed to this policy.
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div>
+                          <div className="mono-up text-mute2 mb-1" style={{ fontSize: 10 }}>Your Committed</div>
+                          <div className="tnum text-bone font-medium text-[13.5px]">0.00 shMON</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="mono-up text-mute2 mb-1" style={{ fontSize: 10 }}>Unbonding Period</div>
+                          <div className="tnum text-bone text-[13.5px]">75 blocks</div>
+                        </div>
+                      </div>
+
+                      {/* Selected indicator — filled-lime pill for high contrast */}
+                      <div className="w-full bg-lime text-lime-fg py-2.5 text-center mono-up font-medium" style={{ fontSize: 11 }}>
+                        Selected
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="p-7 lg:p-9">
                 <div className="mono-up text-mute mb-3 flex justify-between">
                   <span>Enter amount to commit</span>
                   <span>Available · <span className="text-bone2 tnum">2,841.0091</span></span>
                 </div>
                 <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px]">
-                  <input id="rpcIn" type="text" inputMode="decimal" defaultValue="250.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
+                  <input
+                    id="rpcIn"
+                    type="text"
+                    inputMode="decimal"
+                    defaultValue="250.00"
+                    size={1}
+                    className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight"
+                    // JSX-level onInput — keeps the receive output in sync
+                    // without depending on the useEffect-captured listener.
+                    onInput={(e) => {
+                      const v = (e.target as HTMLInputElement).value || "0";
+                      const n = parseFloat(v.replace(/,/g, "")) || 0;
+                      const out = document.getElementById("rpcReceiveOut");
+                      if (out) out.textContent = n.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      });
+                    }}
+                  />
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     {/* MAX button — matches the Stake form's MAX styling */}
                     <button id="rpcMaxBtn" className="mono text-[10.5px] text-bone border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition">MAX</button>
@@ -847,6 +952,37 @@ export default function ShmonadPage() {
                       </span>
                       <span className="text-[15px]">shMON</span>
                     </div>
+                  </div>
+                </div>
+
+                {/* Swap-direction chip — mirrors the Stake modal's chip,
+                    signals that the entered amount flows into Committed shMON. */}
+                <div className="flex items-center gap-3 my-5">
+                  <span className="flex-1 h-px bg-hair2" />
+                  <span className="w-9 h-9 border border-hair2 bg-ink flex items-center justify-center text-mute2">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                      <path d="M7 1.5 L7 11.5 M3 8 L7 12 L11 8" stroke="currentColor" strokeWidth="1.1" strokeLinecap="square" strokeLinejoin="miter" />
+                    </svg>
+                  </span>
+                  <span className="flex-1 h-px bg-hair2" />
+                </div>
+
+                {/* You receive — mirror of the deposit row with Committed shMON */}
+                <div className="mono-up text-mute mb-3 flex justify-between items-center">
+                  <span>You receive</span>
+                  <span className="text-bone2 tnum text-[13.2px]">0.00 cmt-shMON</span>
+                </div>
+                <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] overflow-hidden">
+                  <span id="rpcReceiveOut" className="flex-1 min-w-0 text-[42px] tnum font-light tracking-tight truncate">250.00</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Committed shMON chip — uses the same shMON icon, since
+                        cmt-shMON is just locked shMON. Filled-lime ring around
+                        the placeholder distinguishes it from the deposit chip. */}
+                    <span className="w-7 h-7 rounded-full bg-lime/20 border border-lime flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/shmon-token-new.svg" alt="Committed shMON" className="w-5 h-5 object-contain" />
+                    </span>
+                    <span className="text-[15px]">cmt-shMON</span>
                   </div>
                 </div>
 
@@ -863,18 +999,27 @@ export default function ShmonadPage() {
                     defaultValue="30"
                     className="lime-slider w-full"
                     id="durRange"
+                    // Initial fill: (30 - 7) / (180 - 7) ≈ 13.3% lime.
+                    style={{ ["--slider-fill" as string]: "13.3%" }}
                     // JSX-level handler — re-binds on every render so it's
                     // not subject to stale closure references from useEffect.
                     onInput={(e) => {
-                      const d = parseInt((e.target as HTMLInputElement).value || "30");
+                      const el = e.target as HTMLInputElement;
+                      const d = parseInt(el.value || "30");
+                      // Update the two-tone fill track.
+                      const pct = ((d - 7) / (180 - 7)) * 100;
+                      el.style.setProperty("--slider-fill", `${pct}%`);
                       const dur = document.getElementById("durDays");
-                      const rateVal = document.getElementById("rateLimitVal");
                       if (dur) dur.textContent = String(d);
-                      if (rateVal) {
-                        // Same tier table as in useEffect's tierPerMinForDays
-                        const perMin = d < 36 ? 600 : d < 94 ? 1500 : d < 152 ? 3000 : 6000;
-                        rateVal.textContent = perMin.toLocaleString();
-                      }
+                      // Continuous interpolation:
+                      //   perMin   = days × 45.467  (matches "23 req/sec (1364 Per Min)" at 30 days)
+                      //   reqSec   = ceil(perMin / 60)
+                      const perMin = Math.round(d * 45.467);
+                      const reqSec = Math.ceil(perMin / 60);
+                      const rateVal = document.getElementById("rateLimitVal");
+                      const rateReq = document.getElementById("rateLimitReq");
+                      if (rateVal) rateVal.textContent = perMin.toLocaleString();
+                      if (rateReq) rateReq.textContent = String(reqSec);
                     }}
                   />
                   <div className="flex justify-between mono text-[12px] text-mute mt-2">
@@ -896,10 +1041,14 @@ export default function ShmonadPage() {
                       <span className="mono-up text-mute2" style={{ fontSize: 13 }}>Rate Limit</span>
                     </div>
                     <div className="mono text-[14px]">
-                      <span id="rateLimitVal" className="tnum text-bone font-medium">600</span>
+                      <span id="rateLimitReq" className="tnum text-bone font-medium">23</span>
+                      <span className="text-mute2 ml-1">req/sec</span>
+                      <span className="text-mute2 ml-2">(</span>
+                      <span id="rateLimitVal" className="tnum text-bone font-medium">1,364</span>
                       <span className="text-mute2 ml-1">Per Min</span>
-                      {/* Footnote asterisks — text-bone (not lime) for WCAG-AA contrast at small sizes */}
-                      <span className="text-bone">*</span>
+                      <span className="text-mute2">)</span>
+                      {/* Footnote asterisk — text-bone (not lime) for WCAG-AA contrast at small sizes */}
+                      <span className="text-bone ml-0.5">*</span>
                     </div>
                   </div>
                   <div className="mono text-[11px] text-mute2 mt-2">
@@ -989,37 +1138,21 @@ export default function ShmonadPage() {
       {/* PAGE: POINTS */}
       <main id="page-points" className="page">
         <div className="max-w-[1480px] mx-auto px-6 lg:px-8 py-10 lg:py-14">
-          <div className="flex flex-wrap items-end justify-between gap-6 mb-12">
-            <div>
-              <div className="mono-up text-mute mb-3">[ 004 / Season 02 · Points ]</div>
-              <h1 className="text-[clamp(40px,5vw,72px)] leading-[0.95] tracking-[-0.02em] font-light max-w-[16ch]">
-                Stake earns yield. Behavior earns <span className="serif italic">points</span>.
-              </h1>
-            </div>
-            <div className="mono text-[11.5px] text-mute2 max-w-[40ch] text-right">
-              Season 02 ends in <span className="text-bone">31d 12h 04m</span>. Boosts for stakers, LPs, validators.
-            </div>
-          </div>
-
           <div className="grid grid-cols-12 gap-6 mb-10">
             <div className="col-span-12 md:col-span-5 border border-hair2 bg-ink2 p-6">
-              <div className="mono-up text-mute mb-4">Your points</div>
-              <div className="flex items-baseline gap-3 mb-1">
+              <div className="mono-up text-mute2 mb-4">Your points</div>
+              <div className="flex flex-col items-start gap-1 mb-1">
+                <span className="mono text-[11px] text-mute2">Connect To View</span>
                 <span className="serif text-[64px] leading-none tnum">—</span>
-                <span className="mono text-[11px] text-mute2">connect to view</span>
               </div>
               <div className="mt-5 hairline-t pt-4 grid grid-cols-3 gap-3 mono text-[11px]">
-                <div><div className="text-mute mb-1">Rank</div><div className="text-bone tnum">—</div></div>
-                <div><div className="text-mute mb-1">Boost</div><div className="text-bone tnum">—</div></div>
-                <div><div className="text-mute mb-1">Δ 24h</div><div className="text-bone tnum">—</div></div>
+                <div><div className="text-mute2 mb-1">Rank</div><div className="text-bone tnum">—</div></div>
+                <div><div className="text-mute2 mb-1">Boost</div><div className="text-bone tnum">—</div></div>
+                <div><div className="text-mute2 mb-1">Δ 24h</div><div className="text-bone tnum">—</div></div>
               </div>
-              <button className="cta-fl mt-6 inline-flex items-center gap-2 px-4 h-[40px] border border-bone text-bone text-[12.5px]">
-                <span className="fl-track"><span>Connect wallet</span><span>Connect wallet</span></span>
-                <span className="fl-fill" />
-              </button>
             </div>
             <div className="col-span-12 md:col-span-7 border border-hair2 p-6">
-              <div className="mono-up text-mute mb-4">Active boosts</div>
+              <div className="mono-up text-mute2 mb-4">Active boosts</div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-px bg-hair2">
                 {[
                   { v: "2.5×", l: "Early staker · pre-season" },
@@ -1038,33 +1171,58 @@ export default function ShmonadPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-baseline gap-x-10 gap-y-4 hairline-b pb-5 mb-1">
-            <div><div className="mono-up text-mute">Season</div><div className="serif text-[44px] leading-none">02</div></div>
-            <div><div className="mono-up text-mute">Total points issued</div><div className="serif text-[44px] leading-none tnum">14.2<span className="text-mute2">B</span></div></div>
-            <div><div className="mono-up text-mute">Participants</div><div className="serif text-[44px] leading-none tnum">68,421</div></div>
-            <div className="ml-auto flex items-center gap-2 mono text-[11px]">
-              <button className="lb-filter px-3 py-1.5 border border-lime text-lime" data-filter="all">All</button>
-              <button className="lb-filter px-3 py-1.5 border border-hair2 text-mute2 hover:text-bone" data-filter="staker">Stakers</button>
-              <button className="lb-filter px-3 py-1.5 border border-hair2 text-mute2 hover:text-bone" data-filter="lp">LPs</button>
-              <button className="lb-filter px-3 py-1.5 border border-hair2 text-mute2 hover:text-bone" data-filter="val">Validators</button>
+          {/* Wallet address search — replaces the stats row + class filters.
+              Editorial dark/hairline input with a small search glyph. */}
+          <div className="hairline-b pb-5 mb-1">
+            <div className="border border-hair2 bg-ink2 flex items-center gap-3 px-4 h-[44px]">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="text-mute2 flex-shrink-0">
+                <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M9 9 L12 12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search wallet address (0x…)"
+                className="flex-1 min-w-0 bg-transparent outline-none mono text-[12.5px] text-bone placeholder:text-mute2"
+              />
             </div>
           </div>
 
           <div className="hairline-b">
-            <div className="grid grid-cols-12 mono-up text-mute py-3 hairline-b">
+            <div className="grid grid-cols-12 mono-up text-mute2 py-3 hairline-b">
               <div className="col-span-1">Rank</div>
-              <div className="col-span-4">Address</div>
-              <div className="col-span-2">Class</div>
-              <div className="col-span-2 text-right">Staked</div>
-              <div className="col-span-2 text-right">Points</div>
-              <div className="col-span-1 text-right">Δ 7D</div>
+              <div className="col-span-7">Address</div>
+              <div className="col-span-4 text-right">Points</div>
             </div>
             <div id="lb-rows" />
           </div>
 
-          <div className="flex items-center justify-between mt-6 mono text-[11px] text-mute2">
-            <span>Showing 12 of 68,421 — connect wallet to find your rank</span>
-            <a href="#" className="text-bone hover:text-lime transition flex items-center gap-2">Full leaderboard <span>→</span></a>
+          <div className="flex items-center justify-end mt-6 mono text-[11px] text-mute2">
+            {/* Pagination — replicates the live design's «  <  page / total  >  »
+                pattern in editorial style: square hairline-bordered buttons,
+                bone arrow glyphs, mono mid-text. */}
+            <div className="flex items-center gap-2">
+              <button type="button" aria-label="First page" className="w-8 h-8 border border-hair2 flex items-center justify-center text-bone hover:bg-ink2 hover:border-mute2 transition">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <path d="M6 2 L2 6 L6 10 M10 2 L6 6 L10 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                </svg>
+              </button>
+              <button type="button" aria-label="Previous page" className="w-8 h-8 border border-hair2 flex items-center justify-center text-bone hover:bg-ink2 hover:border-mute2 transition">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <path d="M7 2 L3 6 L7 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                </svg>
+              </button>
+              <span className="px-3 mono text-bone tnum">1<span className="text-mute2"> / 300</span></span>
+              <button type="button" aria-label="Next page" className="w-8 h-8 border border-hair2 flex items-center justify-center text-bone hover:bg-ink2 hover:border-mute2 transition">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <path d="M5 2 L9 6 L5 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                </svg>
+              </button>
+              <button type="button" aria-label="Last page" className="w-8 h-8 border border-hair2 flex items-center justify-center text-bone hover:bg-ink2 hover:border-mute2 transition">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <path d="M2 2 L6 6 L2 10 M6 2 L10 6 L6 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </main>
