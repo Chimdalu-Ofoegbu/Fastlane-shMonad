@@ -1490,8 +1490,9 @@ export default function ShmonadPage() {
               </div>
             </div>
 
-            {/* Rate Limit Reference — 48px below the Commit modal */}
-            <div className="mt-12 border border-hair2">
+            {/* Rate Limit Reference — 48px below the Commit modal.
+                Commit-only: hidden while the Uncommit form is active. */}
+            <div className={`mt-12 border border-hair2 ${rpcMode === "commit" ? "" : "hidden"}`}>
               <div className="hairline-b flex items-center justify-center px-5 h-[44px]">
                 <span className="mono-up text-bone2" style={{ fontSize: 13 }}>Rate Limit Reference</span>
               </div>
@@ -1567,7 +1568,7 @@ export default function ShmonadPage() {
                   {walletConnected ? "48,210" : "—"}
                 </span>
               </div>
-              <div className="mt-5 hairline-t pt-4 grid grid-cols-2 gap-3 mono text-[11px]">
+              <div className="mt-5 hairline-t pt-4 grid grid-cols-2 gap-3 mono text-[13px]">
                 <div><div className="text-mute2 mb-1">Rank</div><div className="text-bone tnum">{walletConnected ? "#312" : "—"}</div></div>
                 <div><div className="text-mute2 mb-1">Boost</div><div className="text-bone tnum">{walletConnected ? "3.4×" : "—"}</div></div>
               </div>
