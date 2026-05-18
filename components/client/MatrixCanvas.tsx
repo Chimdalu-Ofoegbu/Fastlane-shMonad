@@ -121,7 +121,6 @@ export default function MatrixCanvas({ words, font = "toggle" }: Props = {}) {
       octx.font = `${weight} ${fontSize}px ${fontStack}`;
       octx.textBaseline = "middle";
       octx.textAlign = "center";
-      // @ts-expect-error letterSpacing is not in TS lib yet
       octx.letterSpacing = "0.02em";
       octx.fillText(word, w / 2, oh / 2);
       const img = octx.getImageData(0, 0, w, oh).data;
