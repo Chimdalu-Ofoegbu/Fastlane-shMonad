@@ -442,3 +442,10 @@
 
 /* The grain overlay from the root layout interferes visually here — kill it */
 body.grain.shmonad-body::after { display: none; }
+
+/* Theme-aware header logo — dark theme shows the white-wordmark logo,
+   light theme shows the all-black logo. */
+.shmonad-root .logo-dark { display: block; }
+.shmonad-root .logo-light { display: none; }
+:root[data-theme="light"] .shmonad-root .logo-dark { display: none; }
+:root[data-theme="light"] .shmonad-root .logo-light { display: block; }

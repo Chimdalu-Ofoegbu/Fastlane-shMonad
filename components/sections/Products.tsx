@@ -8,16 +8,10 @@ export default function Products() {
     >
       <div className="max-w-[1320px] mx-auto px-8">
         <div className="section-head">
-          <div>
-            <div className="eyebrow">§ 02 — Products</div>
-            <div
-              className="font-mono text-[11px] mt-2"
-              style={{ color: "var(--ink-4)" }}
-            >
-              / what.we.ship
-            </div>
-          </div>
-          <h2 className="serif-disp text-[clamp(36px,4.6vw,72px)] text-balance">
+          <h2
+            className="serif-disp text-[clamp(36px,4.6vw,72px)] text-balance"
+            style={{ gridColumn: "1 / -1" }}
+          >
             Four primitives.
             <br />
             <em style={{ fontStyle: "normal" }}>One execution surface.</em>
@@ -38,7 +32,7 @@ export default function Products() {
               <div className="flex items-center justify-between mb-6">
                 <div
                   className="font-mono text-[11px] tracking-widest"
-                  style={{ color: "var(--signal)" }}
+                  style={{ color: "var(--signal-ink)" }}
                 >
                   A — ATLAS
                 </div>
@@ -61,7 +55,7 @@ export default function Products() {
                 Atlas exposes a single{" "}
                 <span
                   className="font-mono text-[13px]"
-                  style={{ color: "var(--signal)" }}
+                  style={{ color: "var(--signal-ink)" }}
                 >
                   solve()
                 </span>{" "}
@@ -97,7 +91,7 @@ export default function Products() {
               <div className="flex items-center justify-between mb-6">
                 <div
                   className="font-mono text-[11px] tracking-widest"
-                  style={{ color: "var(--signal)" }}
+                  style={{ color: "var(--signal-ink)" }}
                 >
                   B — FASTBIDS
                 </div>
@@ -150,7 +144,7 @@ export default function Products() {
               <div className="flex items-center justify-between mb-6">
                 <div
                   className="font-mono text-[11px] tracking-widest"
-                  style={{ color: "var(--signal)" }}
+                  style={{ color: "var(--signal-ink)" }}
                 >
                   S — shMONAD
                 </div>
@@ -197,7 +191,7 @@ export default function Products() {
               <div className="flex items-center justify-between mb-6">
                 <div
                   className="font-mono text-[11px] tracking-widest"
-                  style={{ color: "var(--signal)" }}
+                  style={{ color: "var(--signal-ink)" }}
                 >
                   R — RELAY
                 </div>

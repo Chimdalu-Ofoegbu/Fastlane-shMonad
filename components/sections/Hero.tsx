@@ -39,7 +39,7 @@ export default function Hero() {
               BUNDLES/S{" "}
               <span
                 className="num"
-                style={{ color: "var(--signal)" }}
+                style={{ color: "var(--signal-ink)" }}
                 id="t-bps"
               >
                 1,204

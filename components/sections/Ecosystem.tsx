@@ -42,22 +42,20 @@ export default function Ecosystem() {
     >
       <div className="max-w-[1320px] mx-auto px-8">
         <div className="section-head">
-          <div>
-            <div className="eyebrow">§ 04 — Ecosystem</div>
-            <div
-              className="font-mono text-[11px] mt-2"
-              style={{ color: "var(--ink-4)" }}
-            >
-              / who.builds.on.fastlane
-            </div>
-          </div>
-          <div>
-            <h2 className="serif-disp text-[clamp(36px,4.6vw,72px)] text-balance">
-              Trusted by leading Apps &amp; Builders
+          <div style={{ gridColumn: "1 / -1", textAlign: "center" }}>
+            <h2 className="serif-disp text-[clamp(36px,4.6vw,72px)]">
+              Trusted by leading
+              <br />
+              Apps &amp; Builders
             </h2>
             <p
               className="mt-5 text-[16px] text-pretty"
-              style={{ color: "var(--ink-3)", lineHeight: 1.55, maxWidth: "60ch" }}
+              style={{
+                color: "var(--ink-3)",
+                lineHeight: 1.55,
+                maxWidth: "60ch",
+                marginInline: "auto",
+              }}
             >
               The infrastructure trusted by the apps you already use.
             </p>

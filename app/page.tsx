@@ -2,6 +2,7 @@ import Nav from "@/components/sections/Nav";
 import Hero from "@/components/sections/Hero";
 import Thesis from "@/components/sections/Thesis";
 import Products from "@/components/sections/Products";
+import AlignmentEngine from "@/components/sections/AlignmentEngine";
 import Ecosystem from "@/components/sections/Ecosystem";
 import ShmonadBanner from "@/components/sections/ShmonadBanner";
 import CTA from "@/components/sections/CTA";
@@ -18,6 +19,7 @@ export default function Home() {
       <Hero />
       <Thesis />
       <Products />
+      <AlignmentEngine />
       <Ecosystem />
       <ShmonadBanner />
       <CTA />

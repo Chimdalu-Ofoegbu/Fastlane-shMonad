@@ -156,7 +156,7 @@ export default function Nav() {
                   LIVE
                 </div>
               </a>
-              <a className="nav-row" href="#products">
+              <a className="nav-row" href="/shmonad">
                 <div className="glyph">S</div>
                 <div>
                   <div className="text-[13.5px]" style={{ color: "var(--ink)" }}>

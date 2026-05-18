@@ -14,20 +14,40 @@ const DEPOSIT_TOKENS: { id: DepositToken; label: string; sub: string; icon: stri
   { id: "WMON", label: "WMON", sub: "Wrapped MON", icon: "/monad-token.svg" },
 ];
 
+// Simulated connected wallet (demo only — no real wallet integration).
+const WALLET_ADDRESS = "0x7F3A2c9b4E1d8a6F05C2eB91D3a7F4c2C9b1e0A8";
+const WALLET_SHORT = "0x7F3A…1e0A8";
+
+// Simulated recent activity feed shown once a wallet is connected.
+const ACTIVITY: { type: string; date: string; amount: string; tx: string }[] = [
+  { type: "Reward", date: "Apr 28 · 17:42", amount: "+0.184 MON", tx: "0x9a2c…41be" },
+  { type: "Epoch", date: "Apr 28 · 02:11", amount: "—", tx: "0x4f88…ddae" },
+  { type: "MEV", date: "Apr 26 · 21:04", amount: "+0.041 MON", tx: "0xe1f2…00c1" },
+  { type: "Stake", date: "Apr 24 · 11:09", amount: "+200 MON", tx: "0x812d…7702" },
+  { type: "Restake", date: "Apr 21 · 09:42", amount: "+12.5 shMON", tx: "0xa01b…b32d" },
+  { type: "Reward", date: "Apr 18 · 06:18", amount: "+0.171 MON", tx: "0x55cf…e4d8" },
+];
+
 export default function ShmonadPage() {
   const [depositToken, setDepositToken] = useState<DepositToken>("MON");
   const [tokenMenuOpen, setTokenMenuOpen] = useState(false);
   const tokenMenuRef = useRef<HTMLDivElement | null>(null);
   const [walletConnected, setWalletConnected] = useState(false);
+  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const walletMenuRef = useRef<HTMLDivElement | null>(null);
+  const [positionOpen, setPositionOpen] = useState(true);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [stakeMode, setStakeMode] = useState<"stake" | "unstake">("stake");
+  const [degenMode, setDegenMode] = useState<"deposit" | "withdraw">("deposit");
+  const [rpcMode, setRpcMode] = useState<"commit" | "uncommit">("commit");
   // Active route — used to hide the global stats strip on certain pages
   // (the strip should not appear on the RPC page).
   const [activeRoute, setActiveRoute] = useState<string>(
     typeof window !== "undefined" ? window.location.hash || "#/stake" : "#/stake"
   );
-  // Degen Pool Details — collapsible state. Defaults to open since the
-  // copy is informational and useful to show on first visit.
-  const [degenDetailsOpen, setDegenDetailsOpen] = useState(true);
+  // Degen Pool Details — collapsible state. Defaults to collapsed on load;
+  // the user expands it when they want the explainer copy.
+  const [degenDetailsOpen, setDegenDetailsOpen] = useState(false);
   // RPC "Select a Policy" dropdown
   const [policyMenuOpen, setPolicyMenuOpen] = useState(false);
   const policyMenuRef = useRef<HTMLDivElement | null>(null);
@@ -47,6 +67,23 @@ export default function ShmonadPage() {
       document.removeEventListener("keydown", onKey);
     };
   }, [policyMenuOpen]);
+  // Connected-wallet dropdown — close on outside click / Escape.
+  useEffect(() => {
+    if (!walletMenuOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (!walletMenuRef.current) return;
+      if (!walletMenuRef.current.contains(e.target as Node)) setWalletMenuOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setWalletMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [walletMenuOpen]);
   useEffect(() => {
     const onHash = () => setActiveRoute(window.location.hash || "#/stake");
     window.addEventListener("hashchange", onHash);
@@ -252,31 +289,62 @@ export default function ShmonadPage() {
     });
     recalcRpc();
 
-    /* ─── DEGEN ack toggle ─── */
-    const ack = document.getElementById("ackBox") as HTMLInputElement | null;
-    const degenCta = document.getElementById("degenCta");
+    /* ─── DEGEN POOL WIDGET ─── mirrors the Stake widget. */
     const degenInput = document.getElementById("degenIn") as HTMLInputElement | null;
-    function updateDegen() {
-      if (!ack || !degenCta || !degenInput) return;
+    const degenOut = document.getElementById("degenOut");
+    const degenMaxBtn = document.getElementById("degenMaxBtn");
+    const degenRate = 0.981;
+    const degenBal = 2841.0091;
+    function recalcDegen() {
+      if (!degenInput) return;
       const v = parseFloat((degenInput.value || "0").replace(/,/g, "")) || 0;
-      if (ack.checked && v > 0) {
-        degenCta.classList.remove("bg-ink3", "text-mute", "cursor-not-allowed");
-        degenCta.classList.add("bg-lime", "text-ink");
-        degenCta.innerHTML =
-          "<span>Deposit " +
-          v.toFixed(2) +
-          " shMON to Degen Pool</span><span>→</span>";
-      } else {
-        degenCta.classList.add("bg-ink3", "text-mute", "cursor-not-allowed");
-        degenCta.classList.remove("bg-lime", "text-ink");
-        degenCta.innerHTML =
-          "<span>" +
-          (ack.checked ? "Enter an amount" : "Acknowledge to continue") +
-          "</span>";
-      }
+      if (degenOut) degenOut.textContent = fmt(v * degenRate, 2);
+      document
+        .querySelectorAll<HTMLSpanElement>(".shmonad-root .degenCtaAmt")
+        .forEach((el) => { el.textContent = fmt(v, 2); });
     }
-    ack?.addEventListener("change", updateDegen);
-    degenInput?.addEventListener("input", updateDegen);
+    degenInput?.addEventListener("input", recalcDegen);
+    degenMaxBtn?.addEventListener("click", () => {
+      if (degenInput) degenInput.value = degenBal.toFixed(4);
+      recalcDegen();
+    });
+    const degenPctBtns = document.querySelectorAll<HTMLButtonElement>(
+      ".shmonad-root .degen-pct-btn"
+    );
+    degenPctBtns.forEach((b) => {
+      b.addEventListener("click", () => {
+        if (degenInput) degenInput.value = (degenBal * parseFloat(b.dataset.pct || "0")).toFixed(2);
+        recalcDegen();
+      });
+    });
+    recalcDegen();
+
+    /* ─── DEGEN withdraw form ─── */
+    const degenWInput = document.getElementById("degenWithdrawIn") as HTMLInputElement | null;
+    const degenWMaxBtn = document.getElementById("degenWithdrawMaxBtn");
+    const degenWBal = 1902.44;
+    function recalcDegenW() {
+      if (!degenWInput) return;
+      const v = parseFloat((degenWInput.value || "0").replace(/,/g, "")) || 0;
+      document
+        .querySelectorAll<HTMLSpanElement>(".shmonad-root .degenWithdrawCtaAmt")
+        .forEach((el) => { el.textContent = fmt(v, 2); });
+    }
+    degenWInput?.addEventListener("input", recalcDegenW);
+    degenWMaxBtn?.addEventListener("click", () => {
+      if (degenWInput) degenWInput.value = degenWBal.toFixed(4);
+      recalcDegenW();
+    });
+    const degenWPctBtns = document.querySelectorAll<HTMLButtonElement>(
+      ".shmonad-root .degen-withdraw-pct-btn"
+    );
+    degenWPctBtns.forEach((b) => {
+      b.addEventListener("click", () => {
+        if (degenWInput) degenWInput.value = (degenWBal * parseFloat(b.dataset.pct || "0")).toFixed(2);
+        recalcDegenW();
+      });
+    });
+    recalcDegenW();
 
     /* ─── VALIDATOR GRID ─── */
     const valGrid = document.getElementById("valGrid");
@@ -467,27 +535,114 @@ export default function ShmonadPage() {
       {/* TOP CHROME */}
       <header className="sticky top-0 z-50 bg-ink/90 backdrop-blur-md hairline-b">
         <div className="max-w-[1480px] mx-auto px-6 lg:px-8 h-[60px] flex items-center justify-between">
-          <a href="#/stake" className="flex items-center gap-2.5 group">
-            <span className="relative w-6 h-6 bg-bone block">
-              <span className="absolute inset-0 bg-ink" style={{ clipPath: "polygon(0 100%, 100% 0, 100% 100%)" }} />
-            </span>
-            <span className="font-sans font-medium tracking-tight text-[15px]">shMonad</span>
+          <a href="#/stake" className="flex items-center group">
+            {/* Theme-aware logo — white-wordmark logo on the dark theme,
+                all-black logo on the light theme. Swapped via CSS. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/shMonad-Logo.png"
+              alt="shMonad"
+              className="logo-dark"
+              style={{ height: 26, width: "auto" }}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/SHMONAD_ALL_BLACK.png"
+              alt="shMonad"
+              className="logo-light"
+              style={{ height: 26, width: "auto" }}
+            />
           </a>
 
           <nav className="hidden md:flex items-center gap-7 text-[13px] text-mute2">
             <a className="nav-link" href="#/stake" data-nav="stake">Stake</a>
             <a className="nav-link" href="#/rpc" data-nav="rpc">Fastlane RPC</a>
             <a className="nav-link" href="#/points" data-nav="points">
-              Points <span className="mono text-[9px] text-lime ml-1 align-top">NEW</span>
+              Points <span className="mono text-[9px] ml-1 align-top" style={{ color: "#9a78ff" }}>NEW</span>
             </a>
             <a className="nav-link" href="#/degen" data-nav="degen">Degen Pool</a>
           </nav>
 
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <button id="connectBtn" className="cta-fl inline-flex items-center gap-2 px-4 h-[36px] bg-lime border border-lime text-lime-fg text-[12.5px] font-medium">
-              <span className="fl-track"><span>Connect wallet</span><span>Connect wallet</span></span>
-            </button>
+            {/* Fixed width so connecting/disconnecting never shifts the nav. */}
+            <div ref={walletMenuRef} className="relative" style={{ width: 148 }}>
+              {walletConnected ? (
+                <>
+                  <button
+                    type="button"
+                    id="connectBtn"
+                    aria-haspopup="menu"
+                    aria-expanded={walletMenuOpen}
+                    onClick={() => setWalletMenuOpen((v) => !v)}
+                    className="w-full inline-flex items-center justify-center gap-2 px-3 h-[36px] border border-hair2 bg-ink2 text-bone text-[12.5px] font-medium hover:bg-ink3"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-lime flex-shrink-0" />
+                    <span className="mono">{WALLET_SHORT}</span>
+                    <svg
+                      width="9"
+                      height="9"
+                      viewBox="0 0 10 10"
+                      fill="none"
+                      aria-hidden="true"
+                      className="text-mute2"
+                      style={{
+                        transform: walletMenuOpen ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 180ms ease",
+                      }}
+                    >
+                      <path d="M2 4 L5 7 L8 4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="square" />
+                    </svg>
+                  </button>
+                  {walletMenuOpen && (
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-[calc(100%+8px)] z-30 w-[228px] border border-hair2 bg-ink shadow-2xl"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          navigator.clipboard?.writeText(WALLET_ADDRESS);
+                          setWalletMenuOpen(false);
+                        }}
+                        className="w-full text-left flex items-center gap-2.5 px-4 py-3 text-[12.5px] text-bone hairline-b hover:bg-ink2"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="text-mute2 flex-shrink-0">
+                          <rect x="5.5" y="5.5" width="8" height="8" stroke="currentColor" strokeWidth="1.3" />
+                          <path d="M10.5 5.5 L10.5 2.5 L2.5 2.5 L2.5 10.5 L5.5 10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="square" />
+                        </svg>
+                        Copy wallet address
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setWalletConnected(false);
+                          setWalletMenuOpen(false);
+                        }}
+                        className="w-full text-left flex items-center gap-2.5 px-4 py-3 text-[12.5px] text-red hover:bg-ink2"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="flex-shrink-0">
+                          <path d="M8 2 L8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="square" />
+                          <path d="M4.4 4.7 A5 5 0 1 0 11.6 4.7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="square" />
+                        </svg>
+                        Disconnect wallet
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <button
+                  type="button"
+                  id="connectBtn"
+                  onClick={() => setWalletConnected(true)}
+                  className="cta-fl w-full inline-flex items-center justify-center gap-2 px-4 h-[36px] bg-lime border border-lime text-lime-fg text-[12.5px] font-medium"
+                >
+                  <span className="fl-track"><span>Connect wallet</span><span>Connect wallet</span></span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -532,11 +687,11 @@ export default function ShmonadPage() {
                           aria-haspopup="menu"
                           aria-expanded={tokenMenuOpen}
                           onClick={() => setTokenMenuOpen((v) => !v)}
-                          className="token-trigger flex items-center gap-2 px-2 py-1.5 border border-transparent hover:border-hair2 hover:bg-ink3 transition"
+                          className="token-trigger flex items-center gap-2 pl-2 py-1.5 border border-transparent hover:border-hair2 hover:bg-ink3 transition"
                         >
                           <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={DEPOSIT_TOKENS.find((t) => t.id === depositToken)?.icon} alt={depositToken} className="w-5 h-5 object-contain" />
+                            <img src={DEPOSIT_TOKENS.find((t) => t.id === depositToken)?.icon} alt={depositToken} className="w-full h-full object-contain" />
                           </span>
                           <span className="text-[15px]">{depositToken}</span>
                           <svg
@@ -572,7 +727,7 @@ export default function ShmonadPage() {
                               >
                                 <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={t.icon} alt={t.label} className="w-5 h-5 object-contain" />
+                                  <img src={t.icon} alt={t.label} className="w-full h-full object-contain" />
                                 </span>
                                 <span className="flex-1 min-w-0">
                                   <span className="block text-[14px] text-bone">{t.label}</span>
@@ -616,10 +771,10 @@ export default function ShmonadPage() {
                   <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] overflow-hidden">
                     <span id="stakeOut" className="flex-1 min-w-0 text-[42px] tnum font-light tracking-tight truncate">471.1500</span>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {/* Round placeholder holding the shMON token icon (drop /site/public/shmon-token-new.svg) */}
+                      {/* Round placeholder holding the shMON token icon */}
                       <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/shmon-token-new.svg" alt="shMON" className="w-5 h-5 object-contain" />
+                        <img src="/shmon-token-new.png" alt="shMON" className="w-full h-full object-contain" />
                       </span>
                       <span className="text-[15px]">shMON</span>
                     </div>
@@ -681,7 +836,7 @@ export default function ShmonadPage() {
                       <div className="flex items-center gap-2 ml-1">
                         <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src="/shmon-token-new.svg" alt="shMON" className="w-5 h-5 object-contain" />
+                          <img src="/shmon-token-new.png" alt="shMON" className="w-full h-full object-contain" />
                         </span>
                         <span className="text-[15px]">shMON</span>
                       </div>
@@ -714,7 +869,7 @@ export default function ShmonadPage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/monad-token.svg" alt="MON" className="w-5 h-5 object-contain" />
+                        <img src="/monad-token.svg" alt="MON" className="w-full h-full object-contain" />
                       </span>
                       <span className="text-[15px]">MON</span>
                     </div>
@@ -733,7 +888,7 @@ export default function ShmonadPage() {
                         Unbond period
                         <span className="inline-flex w-3.5 h-3.5 rounded-full border border-hair2 items-center justify-center text-[9px] text-mute2 leading-none cursor-help" title="Time before unstaked MON is available to withdraw.">i</span>
                       </dt>
-                      <dd className="tnum text-lime">Instant · ≈ 0.6s</dd>
+                      <dd className="tnum" style={{ color: "#9a78ff" }}>Instant · ≈ 0.6s</dd>
                     </div>
                   </dl>
 
@@ -765,30 +920,182 @@ export default function ShmonadPage() {
 
             <div className="mt-12 space-y-6 max-w-[700px] mx-auto">
               <div className="border border-hair2 bg-ink2">
-                <div className="hairline-b flex items-center px-5 h-[44px]">
-                  <span className="mono-up text-mute">Your position</span>
-                </div>
-                <div className="p-6 flex items-center gap-5">
-                  {/* Connect-wallet icon — line-art wallet glyph at 48×48 matching the editorial style */}
-                  <span className="w-12 h-12 flex items-center justify-center text-mute2 flex-shrink-0">
-                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-                      {/* Wallet body */}
-                      <rect x="5.5" y="14" width="37" height="25" stroke="currentColor" strokeWidth="1.4" />
-                      {/* Top fold/flap */}
-                      <path d="M5.5 14 L34 14 L34 8.5 L5.5 8.5 Z" fill="currentColor" />
-                      {/* Card slot / chip */}
-                      <circle cx="34" cy="26.5" r="2.4" fill="currentColor" />
-                      {/* Connection plug — small horizontal stem extending from the right edge */}
-                      <path d="M42.5 26.5 L46.5 26.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
-                      <path d="M46.5 23.5 L46.5 29.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                {walletConnected ? (
+                  <button
+                    type="button"
+                    aria-expanded={positionOpen}
+                    aria-controls="position-body"
+                    aria-label={positionOpen ? "Collapse your position" : "Expand your position"}
+                    onClick={() => setPositionOpen((v) => !v)}
+                    className={`w-full flex items-center justify-between px-5 h-[44px] text-left transition hover:bg-ink3 ${
+                      positionOpen ? "hairline-b" : ""
+                    }`}
+                  >
+                    <span className="mono-up text-mute">Your position</span>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      aria-hidden="true"
+                      className="text-mute2 flex-shrink-0"
+                      style={{
+                        transform: positionOpen ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 200ms ease",
+                      }}
+                    >
+                      <path d="M3 5 L7 9 L11 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="square" strokeLinejoin="miter" />
                     </svg>
-                  </span>
-                  <div className="mono text-[12px] text-mute2 leading-relaxed">
-                    Connect a wallet to view your shMON balance, accrued yield, and active boost multipliers.
+                  </button>
+                ) : (
+                  <div className="hairline-b flex items-center px-5 h-[44px]">
+                    <span className="mono-up text-mute">Your position</span>
                   </div>
-                </div>
+                )}
+                {walletConnected ? (
+                  <div id="position-body" className={`p-6 ${positionOpen ? "" : "hidden"}`}>
+                    <div className="flex items-baseline gap-2">
+                      <span className="tnum text-[42px] font-light tracking-tight leading-none">423.7872</span>
+                      <span className="text-mute2 text-[15px]">MON</span>
+                    </div>
+                    <div className="mono text-[12px] text-mute2 mt-2">≈ $12.29</div>
+
+                    <div className="mt-6 pt-6 hairline-t grid grid-cols-2 gap-y-5">
+                      <div>
+                        <div className="mono-up text-mute mb-1.5" style={{ fontSize: 12 }}>Principal</div>
+                        <div className="tnum text-[16px] text-bone">412.0840 MON</div>
+                      </div>
+                      <div>
+                        <div className="mono-up text-mute mb-1.5" style={{ fontSize: 12 }}>Earned</div>
+                        <div className="tnum text-[16px]" style={{ color: "#9a78ff" }}>+11.7032</div>
+                      </div>
+                      <div>
+                        <div className="mono-up text-mute mb-1.5" style={{ fontSize: 12 }}>APY</div>
+                        <div className="tnum text-[16px]" style={{ color: "#9a78ff" }}>8.44%</div>
+                      </div>
+                      <div>
+                        <div className="mono-up text-mute mb-1.5" style={{ fontSize: 12 }}>Since</div>
+                        <div className="tnum text-[16px] text-bone">42d</div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 pt-6 hairline-t">
+                      <div className="mono-up text-mute text-[10px] mb-2.5">Next epoch</div>
+                      <div className="h-1 bg-hair2 overflow-hidden">
+                        <div className="h-full bg-lime" style={{ width: "62%" }} />
+                      </div>
+                      <div className="mono text-[11.5px] text-mute2 mt-2.5">17h 22m · #413</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-6 flex items-center gap-5">
+                    {/* Connect-wallet icon — line-art wallet glyph at 48×48 matching the editorial style */}
+                    <span className="w-12 h-12 flex items-center justify-center text-mute2 flex-shrink-0">
+                      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                        {/* Wallet body */}
+                        <rect x="5.5" y="14" width="37" height="25" stroke="currentColor" strokeWidth="1.4" />
+                        {/* Top fold/flap */}
+                        <path d="M5.5 14 L34 14 L34 8.5 L5.5 8.5 Z" fill="currentColor" />
+                        {/* Card slot / chip */}
+                        <circle cx="34" cy="26.5" r="2.4" fill="currentColor" />
+                        {/* Connection plug — small horizontal stem extending from the right edge */}
+                        <path d="M42.5 26.5 L46.5 26.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                        <path d="M46.5 23.5 L46.5 29.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                      </svg>
+                    </span>
+                    <div className="mono text-[12px] text-mute2 leading-relaxed">
+                      Connect a wallet to view your shMON balance, accrued yield, and active boost multipliers.
+                    </div>
+                  </div>
+                )}
               </div>
 
+            </div>
+
+            <div className="mt-12 max-w-[700px] mx-auto">
+              <div className="border border-hair2 bg-ink2">
+                {walletConnected ? (
+                  <button
+                    type="button"
+                    aria-expanded={activityOpen}
+                    aria-controls="activity-body"
+                    aria-label={activityOpen ? "Collapse your activity" : "Expand your activity"}
+                    onClick={() => setActivityOpen((v) => !v)}
+                    className={`w-full flex items-center justify-between px-5 h-[44px] text-left transition hover:bg-ink3 ${
+                      activityOpen ? "hairline-b" : ""
+                    }`}
+                  >
+                    <span className="mono-up text-mute">Your activity</span>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      aria-hidden="true"
+                      className="text-mute2 flex-shrink-0"
+                      style={{
+                        transform: activityOpen ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 200ms ease",
+                      }}
+                    >
+                      <path d="M3 5 L7 9 L11 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="square" strokeLinejoin="miter" />
+                    </svg>
+                  </button>
+                ) : (
+                  <div className="hairline-b flex items-center px-5 h-[44px]">
+                    <span className="mono-up text-mute">Your activity</span>
+                  </div>
+                )}
+                {walletConnected ? (
+                  <div id="activity-body" className={activityOpen ? "" : "hidden"}>
+                    {ACTIVITY.map((a, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between gap-4 px-5 py-3.5 hairline-b"
+                      >
+                        <div>
+                          <span
+                            className="inline-flex mono-up text-bone2 border border-hair2 px-2 py-1"
+                            style={{ fontSize: 10 }}
+                          >
+                            {a.type}
+                          </span>
+                          <div className="mono text-[11px] text-mute mt-1.5">{a.date}</div>
+                        </div>
+                        <div className="text-right">
+                          <div
+                            className="tnum text-[13px]"
+                            style={{ color: a.amount === "—" ? "var(--sh-mute2)" : "#9a78ff" }}
+                          >
+                            {a.amount}
+                          </div>
+                          <div className="mono text-[11px] text-mute2 mt-1.5">{a.tx}</div>
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="w-full px-5 py-4 text-center mono-up text-[11px] transition hover:bg-ink3"
+                      style={{ color: "#9a78ff" }}
+                    >
+                      View all activity →
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-6 flex items-center gap-5">
+                    {/* Activity icon — line-art clock glyph at 48×48 matching the editorial style */}
+                    <span className="w-12 h-12 flex items-center justify-center text-mute2 flex-shrink-0">
+                      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                        <circle cx="24" cy="24" r="16" stroke="currentColor" strokeWidth="1.4" />
+                        <path d="M24 14 L24 24 L31.5 28" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" strokeLinejoin="miter" />
+                      </svg>
+                    </span>
+                    <div className="mono text-[12px] text-mute2 leading-relaxed">
+                      Connect a wallet to view your staking history, reward claims, and boost activity.
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
         </div>
@@ -829,15 +1136,34 @@ export default function ShmonadPage() {
             {/* Commit / Uncommit modal — 48px below How it works */}
             <div className="mt-12 border border-hair2 bg-ink">
               <div className="flex items-center hairline-b">
-                <button className="flex-1 py-3.5 mono-up text-bone bg-ink3">Commit</button>
-                <button className="flex-1 py-3.5 mono-up text-mute hover:text-bone">Uncommit</button>
+                <button
+                  type="button"
+                  onClick={() => setRpcMode("commit")}
+                  className={`flex-1 py-3.5 mono-up transition ${
+                    rpcMode === "commit" ? "text-bone bg-ink3" : "text-mute hover:text-bone"
+                  }`}
+                >
+                  Commit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRpcMode("uncommit")}
+                  className={`flex-1 py-3.5 mono-up transition ${
+                    rpcMode === "uncommit" ? "text-bone bg-ink3" : "text-mute hover:text-bone"
+                  }`}
+                >
+                  Uncommit
+                </button>
               </div>
 
               {/* Policy selector — click to open the "Select a Policy" dropdown.
                   Hover lifts the bg slightly + nudges the chevron right; click
                   opens an absolute-positioned menu below with the single
                   available policy ("Fastlane RPC"). */}
-              <div ref={policyMenuRef} className="relative mt-4 mx-7 lg:mx-9">
+              <div
+                ref={policyMenuRef}
+                className={`relative mt-4 mx-7 lg:mx-9 ${rpcMode === "commit" ? "" : "hidden"}`}
+              >
                 <button
                   type="button"
                   aria-haspopup="menu"
@@ -916,7 +1242,7 @@ export default function ShmonadPage() {
                 </div>
               </div>
 
-              <div className="p-7 lg:p-9">
+              <div className={`p-7 lg:p-9 ${rpcMode === "commit" ? "" : "hidden"}`}>
                 <div className="mono-up text-mute mb-3 flex justify-between">
                   <span>Enter amount to commit</span>
                   <span>Available · <span className="text-bone2 tnum">2,841.0091</span></span>
@@ -945,10 +1271,10 @@ export default function ShmonadPage() {
                     {/* MAX button — matches the Stake form's MAX styling */}
                     <button id="rpcMaxBtn" className="mono text-[10.5px] text-bone border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition">MAX</button>
                     <div className="flex items-center gap-2 ml-1">
-                      {/* Round placeholder holding the shMON token icon (drop /site/public/shmon-token-new.svg) */}
+                      {/* Round placeholder holding the shMON token icon */}
                       <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/shmon-token-new.svg" alt="shMON" className="w-5 h-5 object-contain" />
+                        <img src="/shmon-token-new.png" alt="shMON" className="w-full h-full object-contain" />
                       </span>
                       <span className="text-[15px]">shMON</span>
                     </div>
@@ -980,7 +1306,7 @@ export default function ShmonadPage() {
                         the placeholder distinguishes it from the deposit chip. */}
                     <span className="w-7 h-7 rounded-full bg-lime/20 border border-lime flex items-center justify-center overflow-hidden flex-shrink-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/shmon-token-new.svg" alt="Committed shMON" className="w-5 h-5 object-contain" />
+                      <img src="/shmon-token-new.png" alt="Committed shMON" className="w-full h-full object-contain" />
                     </span>
                     <span className="text-[15px]">cmt-shMON</span>
                   </div>
@@ -1067,6 +1393,101 @@ export default function ShmonadPage() {
                   </span>
                 </button>
               </div>
+
+              {/* ─── UNCOMMIT FORM ─── release committed shMON back to shMON. */}
+              <div className={`p-7 lg:p-9 ${rpcMode === "uncommit" ? "" : "hidden"}`}>
+                <div className="mono-up text-mute mb-3 flex justify-between">
+                  <span>Enter amount to uncommit</span>
+                  <span>Committed · <span className="text-bone2 tnum">1,640.0000</span></span>
+                </div>
+                <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px]">
+                  <input
+                    id="rpcUncommitIn"
+                    type="text"
+                    inputMode="decimal"
+                    defaultValue="0.00"
+                    size={1}
+                    className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight"
+                    onInput={(e) => {
+                      const n = parseFloat(((e.target as HTMLInputElement).value || "0").replace(/,/g, "")) || 0;
+                      const f = n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      const out = document.getElementById("rpcUncommitOut");
+                      if (out) out.textContent = f;
+                      document
+                        .querySelectorAll<HTMLSpanElement>(".shmonad-root .rpcUncommitCtaAmt")
+                        .forEach((el) => { el.textContent = f; });
+                    }}
+                  />
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      id="rpcUncommitMaxBtn"
+                      type="button"
+                      onClick={() => {
+                        const input = document.getElementById("rpcUncommitIn") as HTMLInputElement | null;
+                        const out = document.getElementById("rpcUncommitOut");
+                        if (input) input.value = "1,640.00";
+                        if (out) out.textContent = "1,640.00";
+                        document
+                          .querySelectorAll<HTMLSpanElement>(".shmonad-root .rpcUncommitCtaAmt")
+                          .forEach((el) => { el.textContent = "1,640.00"; });
+                      }}
+                      className="mono text-[10.5px] text-bone border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition"
+                    >
+                      MAX
+                    </button>
+                    <div className="flex items-center gap-2 ml-1">
+                      <span className="w-7 h-7 rounded-full bg-lime/20 border border-lime flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/shmon-token-new.png" alt="Committed shMON" className="w-full h-full object-contain" />
+                      </span>
+                      <span className="text-[15px]">cmt-shMON</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 my-5">
+                  <span className="flex-1 h-px bg-hair2" />
+                  <span className="w-9 h-9 border border-hair2 bg-ink flex items-center justify-center text-mute2">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                      <path d="M7 1.5 L7 11.5 M3 8 L7 12 L11 8" stroke="currentColor" strokeWidth="1.1" strokeLinecap="square" strokeLinejoin="miter" />
+                    </svg>
+                  </span>
+                  <span className="flex-1 h-px bg-hair2" />
+                </div>
+
+                <div className="mono-up text-mute mb-3 flex justify-between items-center">
+                  <span>You receive</span>
+                  <span className="text-bone2 tnum text-[13.2px]">0.00 shMON</span>
+                </div>
+                <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] overflow-hidden">
+                  <span id="rpcUncommitOut" className="flex-1 min-w-0 text-[42px] tnum font-light tracking-tight truncate">0.00</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/shmon-token-new.png" alt="shMON" className="w-full h-full object-contain" />
+                    </span>
+                    <span className="text-[15px]">shMON</span>
+                  </div>
+                </div>
+
+                <dl className="mt-7 mono text-[12.5px]">
+                  <div className="flex justify-between py-2 hairline-b">
+                    <dt className="text-mute">Cooldown</dt>
+                    <dd className="tnum">~ 1 epoch</dd>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <dt className="text-mute">Rate limit</dt>
+                    <dd>Released when cooldown ends</dd>
+                  </div>
+                </dl>
+
+                <button className="cta-fl mt-7 w-full inline-flex items-center justify-center h-[58px] bg-lime text-lime-fg text-[14.5px] font-medium">
+                  <span className="fl-track">
+                    <span>Uncommit <span className="tnum rpcUncommitCtaAmt">0.00</span> cmt-shMON</span>
+                    <span>Uncommit <span className="tnum rpcUncommitCtaAmt">0.00</span> cmt-shMON</span>
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Rate Limit Reference — 48px below the Commit modal */}
@@ -1142,13 +1563,13 @@ export default function ShmonadPage() {
             <div className="col-span-12 md:col-span-5 border border-hair2 bg-ink2 p-6">
               <div className="mono-up text-mute2 mb-4">Your points</div>
               <div className="flex flex-col items-start gap-1 mb-1">
-                <span className="mono text-[11px] text-mute2">Connect To View</span>
-                <span className="serif text-[64px] leading-none tnum">—</span>
+                <span className="serif text-[64px] leading-none tnum">
+                  {walletConnected ? "48,210" : "—"}
+                </span>
               </div>
-              <div className="mt-5 hairline-t pt-4 grid grid-cols-3 gap-3 mono text-[11px]">
-                <div><div className="text-mute2 mb-1">Rank</div><div className="text-bone tnum">—</div></div>
-                <div><div className="text-mute2 mb-1">Boost</div><div className="text-bone tnum">—</div></div>
-                <div><div className="text-mute2 mb-1">Δ 24h</div><div className="text-bone tnum">—</div></div>
+              <div className="mt-5 hairline-t pt-4 grid grid-cols-2 gap-3 mono text-[11px]">
+                <div><div className="text-mute2 mb-1">Rank</div><div className="text-bone tnum">{walletConnected ? "#312" : "—"}</div></div>
+                <div><div className="text-mute2 mb-1">Boost</div><div className="text-bone tnum">{walletConnected ? "3.4×" : "—"}</div></div>
               </div>
             </div>
             <div className="col-span-12 md:col-span-7 border border-hair2 p-6">
@@ -1236,36 +1657,121 @@ export default function ShmonadPage() {
           <div className="max-w-[700px] mx-auto">
             <div className="border border-hair2 bg-ink">
               <div className="flex items-center hairline-b">
-                <button className="flex-1 py-3.5 mono-up text-bone bg-ink3">Deposit</button>
-                <button className="flex-1 py-3.5 mono-up text-mute hover:text-bone">Withdraw</button>
-                <div className="px-5 mono text-[10.5px] text-red">unaudited</div>
+                <button
+                  type="button"
+                  onClick={() => setDegenMode("deposit")}
+                  className={`tab-btn flex-1 py-3.5 mono-up text-[14px] transition ${degenMode === "deposit" ? "text-bone bg-ink3" : "text-mute hover:text-bone"}`}
+                >
+                  Deposit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDegenMode("withdraw")}
+                  className={`tab-btn flex-1 py-3.5 mono-up text-[14px] transition ${degenMode === "withdraw" ? "text-bone bg-ink3" : "text-mute hover:text-bone"}`}
+                >
+                  Withdraw
+                </button>
               </div>
-              <div className="p-7 lg:p-9">
-                <div className="mono-up text-mute mb-3 flex justify-between"><span>Deposit shMON</span><span>Balance · <span className="text-bone2 tnum">2,841.0091</span></span></div>
-                <div className="border hair2 bg-ink2 flex items-center px-5 h-[78px]">
-                  <input id="degenIn" type="text" inputMode="decimal" defaultValue="100.00" className="flex-1 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
-                  <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 bg-lime block" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% 75%, 0 100%)" }} />
-                    <span className="text-[15px]">shMON</span>
+
+              <div className={`p-7 lg:p-9 ${degenMode === "deposit" ? "" : "hidden"}`}>
+                <div className="mono-up text-mute mb-3 flex justify-between items-center">
+                  <span>You deposit</span>
+                  <span className="text-bone2 tnum text-[13.2px]">2,841.0091 MON</span>
+                </div>
+                <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] relative">
+                  <input id="degenIn" type="text" inputMode="decimal" defaultValue="100.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button id="degenMaxBtn" className="mono text-[10.5px] text-bone border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition">MAX</button>
+                    <div className="flex items-center gap-2 ml-1">
+                      <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/monad-token.svg" alt="MON" className="w-full h-full object-contain" />
+                      </span>
+                      <span className="text-[15px]">MON</span>
+                    </div>
                   </div>
                 </div>
 
-                <dl className="mt-7 mono text-[12.5px]">
-                  <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Pool</dt><dd>dgshMON v2</dd></div>
-                  <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Strategy</dt><dd>Looped staking + perp-funding capture + MEV bundle bidding</dd></div>
-                  <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Estimated APR</dt><dd className="tnum text-lime">22.4%</dd></div>
-                  <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Lockup</dt><dd>None · withdrawals processed end-of-epoch</dd></div>
-                  <div className="flex justify-between py-2 hairline-b"><dt className="text-mute">Performance fee</dt><dd className="tnum">10% on yield only</dd></div>
-                  <div className="flex justify-between py-2"><dt className="text-mute">Principal risk</dt><dd className="text-red">YES · strategies are unaudited</dd></div>
-                </dl>
+                <div className="mt-4 grid grid-cols-4 gap-px bg-hair2">
+                  <button className="degen-pct-btn bg-ink2 py-2 mono text-[10.5px] text-mute2 hover:text-bone hover:bg-ink3" data-pct="0.25">25%</button>
+                  <button className="degen-pct-btn bg-ink2 py-2 mono text-[10.5px] text-mute2 hover:text-bone hover:bg-ink3" data-pct="0.50">50%</button>
+                  <button className="degen-pct-btn bg-ink2 py-2 mono text-[10.5px] text-mute2 hover:text-bone hover:bg-ink3" data-pct="0.75">75%</button>
+                  <button className="degen-pct-btn bg-ink2 py-2 mono text-[10.5px] text-mute2 hover:text-bone hover:bg-ink3" data-pct="1.00">MAX</button>
+                </div>
 
-                <label className="mt-7 flex items-start gap-3 cursor-pointer">
-                  <input id="ackBox" type="checkbox" className="mt-1 accent-lime w-4 h-4" />
-                  <span className="mono text-[11.5px] text-mute2 leading-relaxed">I understand the Degen Pool runs unaudited strategies that may lose principal. I am not depositing more than I can afford to lose.</span>
-                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!walletConnected) setWalletConnected(true);
+                    // (no-op when connected — placeholder for real deposit action)
+                  }}
+                  className="cta-fl mt-7 w-full inline-flex items-center justify-center h-[58px] bg-lime text-lime-fg text-[14.5px] font-medium"
+                >
+                  <span className="fl-track">
+                    {walletConnected ? (
+                      <>
+                        <span>Deposit <span className="tnum degenCtaAmt">100.00</span> MON →</span>
+                        <span>Deposit <span className="tnum degenCtaAmt">100.00</span> MON →</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Connect wallet</span>
+                        <span>Connect wallet</span>
+                      </>
+                    )}
+                  </span>
+                </button>
+              </div>
 
-                <button id="degenCta" className="cta-fl mt-6 w-full inline-flex items-center justify-center gap-3 h-[58px] bg-ink3 text-mute text-[14.5px] font-medium cursor-not-allowed">
-                  <span>Acknowledge to continue</span>
+              {/* ─── WITHDRAW FORM ─── mirrors the Deposit form: withdraw
+                  dgshMON pool position back out. */}
+              <div className={`p-7 lg:p-9 ${degenMode === "withdraw" ? "" : "hidden"}`}>
+                <div className="mono-up text-mute mb-3 flex justify-between items-center">
+                  <span>You withdraw</span>
+                  <span className="text-bone2 tnum text-[13.2px]">1,902.4400 MON</span>
+                </div>
+                <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] relative">
+                  <input id="degenWithdrawIn" type="text" inputMode="decimal" defaultValue="0.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button id="degenWithdrawMaxBtn" className="mono text-[10.5px] text-bone border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition">MAX</button>
+                    <div className="flex items-center gap-2 ml-1">
+                      <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/monad-token.svg" alt="MON" className="w-full h-full object-contain" />
+                      </span>
+                      <span className="text-[15px]">MON</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-4 gap-px bg-hair2">
+                  <button className="degen-withdraw-pct-btn bg-ink2 py-2 mono text-[10.5px] text-mute2 hover:text-bone hover:bg-ink3" data-pct="0.25">25%</button>
+                  <button className="degen-withdraw-pct-btn bg-ink2 py-2 mono text-[10.5px] text-mute2 hover:text-bone hover:bg-ink3" data-pct="0.50">50%</button>
+                  <button className="degen-withdraw-pct-btn bg-ink2 py-2 mono text-[10.5px] text-mute2 hover:text-bone hover:bg-ink3" data-pct="0.75">75%</button>
+                  <button className="degen-withdraw-pct-btn bg-ink2 py-2 mono text-[10.5px] text-mute2 hover:text-bone hover:bg-ink3" data-pct="1.00">MAX</button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!walletConnected) setWalletConnected(true);
+                    // (no-op when connected — placeholder for real withdraw action)
+                  }}
+                  className="cta-fl mt-7 w-full inline-flex items-center justify-center h-[58px] bg-lime text-lime-fg text-[14.5px] font-medium"
+                >
+                  <span className="fl-track">
+                    {walletConnected ? (
+                      <>
+                        <span>Withdraw <span className="tnum degenWithdrawCtaAmt">0.00</span> MON →</span>
+                        <span>Withdraw <span className="tnum degenWithdrawCtaAmt">0.00</span> MON →</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Connect wallet</span>
+                        <span>Connect wallet</span>
+                      </>
+                    )}
+                  </span>
                 </button>
               </div>
             </div>
@@ -1285,6 +1791,7 @@ export default function ShmonadPage() {
                 <div className="flex items-center gap-2">
                   <span className="inline-flex w-3.5 h-3.5 rounded-full border border-mute2 items-center justify-center text-[9px] text-mute2 leading-none">i</span>
                   <span className="mono-up text-bone2" style={{ fontSize: 13 }}>Degen Pool Details</span>
+                  <span className="mono text-[10.5px] text-bone border border-lime px-2 py-1">0% APY</span>
                 </div>
                 {/* Chevron — rotates 180° when expanded */}
                 <svg

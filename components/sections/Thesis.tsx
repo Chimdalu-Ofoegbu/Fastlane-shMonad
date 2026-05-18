@@ -44,7 +44,7 @@ export default function Thesis() {
               >
                 <div
                   className="font-mono text-[11px]"
-                  style={{ color: "var(--signal)" }}
+                  style={{ color: "var(--signal-ink)" }}
                 >
                   → 01
                 </div>
@@ -71,7 +71,7 @@ export default function Thesis() {
               >
                 <div
                   className="font-mono text-[11px]"
-                  style={{ color: "var(--signal)" }}
+                  style={{ color: "var(--signal-ink)" }}
                 >
                   → 02
                 </div>
@@ -94,7 +94,7 @@ export default function Thesis() {
               <div className="py-6 grid grid-cols-[80px_1fr] gap-6">
                 <div
                   className="font-mono text-[11px]"
-                  style={{ color: "var(--signal)" }}
+                  style={{ color: "var(--signal-ink)" }}
                 >
                   → 03
                 </div>

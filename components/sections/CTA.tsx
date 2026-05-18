@@ -7,7 +7,6 @@ export default function CTA() {
     >
       <div className="max-w-[1320px] mx-auto px-8 grid grid-cols-12 gap-10 items-end">
         <div className="col-span-12 md:col-span-8">
-          <div className="eyebrow mb-6">§ 05 — Build with us</div>
           <h2
             className="display text-balance"
             style={{ fontSize: "clamp(48px, 7.4vw, 120px)" }}
