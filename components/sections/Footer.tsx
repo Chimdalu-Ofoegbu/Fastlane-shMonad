@@ -25,9 +25,9 @@ export default function Footer() {
               className="serif-disp text-[40px] mt-7 text-balance"
               style={{ color: "var(--ink)" }}
             >
-              The execution layer
+              The Alignment Layer
               <br />
-              for an honest chain.
+              of Monad
             </div>
             <div
               className="mt-7 flex items-center gap-3 text-[12px] font-mono"
@@ -81,12 +81,6 @@ export default function Footer() {
 
         <div className="footer-canvas-wrap relative mt-16">
           <MatrixCanvas />
-          <div
-            className="absolute top-4 left-0 font-mono text-[11px] tracking-widest"
-            style={{ color: "var(--ink-4)" }}
-          >
-            FIG. 03 — RESOLVE
-          </div>
         </div>
 
         <div

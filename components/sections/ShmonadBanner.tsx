@@ -56,7 +56,7 @@ export default function ShmonadBanner() {
           <div className="relative z-10 text-center px-5 md:px-10 py-12 max-w-[960px]">
             <h2
               style={{
-                fontFamily: "var(--font-geist), sans-serif",
+                fontFamily: "var(--font-newsreader), Georgia, serif",
                 fontWeight: 700,
                 fontSize: "clamp(20px, 4.6vw, 56px)",
                 lineHeight: 1.08,
@@ -71,7 +71,7 @@ export default function ShmonadBanner() {
               {" "}with shMonad
             </h2>
             <p
-              className="font-serif text-balance"
+              className="text-balance"
               style={{
                 color: "rgba(255, 255, 255, 0.78)",
                 fontSize: 16,

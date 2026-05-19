@@ -1,6 +1,7 @@
 import Nav from "@/components/sections/Nav";
 import Hero from "@/components/sections/Hero";
 import Thesis from "@/components/sections/Thesis";
+import YieldEngine from "@/components/sections/YieldEngine";
 import Products from "@/components/sections/Products";
 import AlignmentEngine from "@/components/sections/AlignmentEngine";
 import Ecosystem from "@/components/sections/Ecosystem";
@@ -17,6 +18,7 @@ export default function Home() {
       <Preloader />
       <Nav />
       <Hero />
+      <YieldEngine />
       <Thesis />
       <Products />
       <AlignmentEngine />

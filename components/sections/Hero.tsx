@@ -107,7 +107,7 @@ export default function Hero() {
               className="metric-val ticker"
               style={{ whiteSpace: "nowrap", fontSize: "clamp(36px, 4.2vw, 52px)" }}
             >
-              424M mon
+              430m Mon
             </div>
             <div className="metric-lab mt-2">TVL on shMONAD</div>
           </div>
@@ -116,8 +116,8 @@ export default function Hero() {
             <div className="metric-lab mt-2">Median bundle-to-block</div>
           </div>
           <div className="p-7">
-            <div className="metric-val ticker">128</div>
-            <div className="metric-lab mt-2">Validators integrated</div>
+            <div className="metric-val ticker">136</div>
+            <div className="metric-lab mt-2">Validators onboarded</div>
           </div>
         </div>
       </div>

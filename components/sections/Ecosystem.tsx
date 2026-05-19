@@ -2,14 +2,11 @@ type Partner = { name: string; href: string; cls: string };
 
 const PARTNERS: Partner[] = [
   { name: "Kuru", href: "#", cls: "serif-disp text-[40px]" },
-  { name: "aPriori", href: "#", cls: "font-mono text-[28px] tracking-tighter" },
+  { name: "Uniswap", href: "#", cls: "font-mono text-[28px]" },
   { name: "Curvance", href: "#", cls: "serif-disp italic text-[40px]" },
-  { name: "0x.search", href: "#", cls: "font-mono text-[28px]" },
-  { name: "Caddy", href: "#", cls: "serif-disp text-[40px]" },
-  { name: "MONOPLEX", href: "#", cls: "font-mono text-[28px] tracking-widest" },
-  { name: "Pyth", href: "#", cls: "serif-disp italic text-[40px]" },
-  { name: "layerN", href: "#", cls: "font-mono text-[28px]" },
-  { name: "Wormhole", href: "#", cls: "serif-disp text-[40px]" },
+  { name: "Neverland", href: "#", cls: "font-mono text-[28px]" },
+  { name: "Euler", href: "#", cls: "serif-disp text-[40px]" },
+  { name: "Balancer", href: "#", cls: "font-mono text-[28px]" },
 ];
 
 export default function Ecosystem() {
@@ -91,7 +88,7 @@ export default function Ecosystem() {
             }}
           >
             <div className="metric-lab mb-2">BACKED BY</div>
-            <div className="serif-disp text-[28px]">Paradigm</div>
+            <div className="serif-disp text-[28px]">Figment Capital</div>
           </div>
           <div
             className="p-7"
@@ -101,14 +98,14 @@ export default function Ecosystem() {
             }}
           >
             <div className="metric-lab mb-2">BACKED BY</div>
-            <div className="serif-disp text-[28px] italic">Dragonfly</div>
+            <div className="serif-disp text-[28px]">DBA</div>
           </div>
           <div
             className="p-7"
             style={{ borderBottom: "1px solid var(--rule)" }}
           >
             <div className="metric-lab mb-2">BACKED BY</div>
-            <div className="serif-disp text-[28px]">Variant</div>
+            <div className="serif-disp text-[28px]">Coinbase Ventures</div>
           </div>
           <div className="p-7 col-span-2 md:col-span-4">
             <div
@@ -119,8 +116,8 @@ export default function Ecosystem() {
                 className="col-span-12 md:col-span-4 text-pretty"
                 style={{ color: "var(--ink-3)" }}
               >
-                Research and engineering partners across the Monad ecosystem.
-                Selective. No paid placements.
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+                eiusmod tempor incididunt ut.
               </div>
               <a
                 href="#"

@@ -7,18 +7,13 @@ export default function Thesis() {
     >
       <div className="max-w-[1320px] mx-auto px-8">
         <div className="section-head">
-          <div>
-            <div className="eyebrow">§ 01 — Thesis</div>
-            <div
-              className="font-mono text-[11px] mt-2"
-              style={{ color: "var(--ink-4)" }}
-            >
-              / what.is.fastlane
-            </div>
-          </div>
-          <h2 className="serif-disp text-[clamp(36px,4.6vw,72px)] text-balance">
-            A protocol-level <em style={{ fontStyle: "normal" }}>marketplace</em> for the order in which Monad
-            blocks are built.
+          <h2
+            className="serif-disp text-[clamp(36px,4.6vw,72px)] text-balance"
+            style={{ gridColumn: "1 / -1" }}
+          >
+            MEV Infrastructure and Yield
+            <br />
+            Layer on Monad
           </h2>
         </div>
 

@@ -36,8 +36,10 @@ export default function ShmonadPage() {
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const walletMenuRef = useRef<HTMLDivElement | null>(null);
   const [positionOpen, setPositionOpen] = useState(true);
+  const [degenPositionOpen, setDegenPositionOpen] = useState(true);
   const [activityOpen, setActivityOpen] = useState(false);
   const [stakeMode, setStakeMode] = useState<"stake" | "unstake">("stake");
+  const [unstakeOption, setUnstakeOption] = useState<"epoch" | "instant">("instant");
   const [degenMode, setDegenMode] = useState<"deposit" | "withdraw">("deposit");
   const [rpcMode, setRpcMode] = useState<"commit" | "uncommit">("commit");
   // Active route — used to hide the global stats strip on certain pages
@@ -373,12 +375,12 @@ export default function ShmonadPage() {
     if (feed) {
       const addrs = [
         "0xA1c2…f8E1",
-        "jumper.eth",
+        "0x3F1b…9A22",
         "0x78dA…1c0B",
         "0x4FEC…cc92",
         "0xC0DE…0d8E",
-        "fastlane.eth",
-        "meow.mon",
+        "0xC7d4…0E5a",
+        "0x6aE0…b3F1",
         "0xBe11…aa01",
         "0x12aa…ff3c",
         "0xDEAD…BEEF",
@@ -423,13 +425,13 @@ export default function ShmonadPage() {
       const rows = [
         { r: 1, addr: "0xA1c2…f8E1", cls: "staker", s: "2,419,884", p: "124.8M", d: "+8.2%" },
         { r: 2, addr: "0x78dA…1c0B", cls: "lp", s: "1,902,118", p: "98.4M", d: "+12.1%" },
-        { r: 3, addr: "jumper.eth", cls: "staker", s: "1,711,209", p: "88.9M", d: "+3.4%" },
+        { r: 3, addr: "0x3F1b…9A22", cls: "staker", s: "1,711,209", p: "88.9M", d: "+3.4%" },
         { r: 4, addr: "0x4FEC…cc92", cls: "val", s: "1,540,001", p: "72.3M", d: "+2.0%" },
         { r: 5, addr: "0xC0DE…0d8E", cls: "staker", s: "1,288,442", p: "64.1M", d: "+5.8%" },
-        { r: 6, addr: "fastlane.eth", cls: "val", s: "1,184,000", p: "58.7M", d: "+1.9%" },
+        { r: 6, addr: "0xC7d4…0E5a", cls: "val", s: "1,184,000", p: "58.7M", d: "+1.9%" },
         { r: 7, addr: "0xBe11…aa01", cls: "lp", s: "998,212", p: "52.0M", d: "+18.4%" },
         { r: 8, addr: "0x12aa…ff3c", cls: "staker", s: "884,919", p: "44.7M", d: "+6.0%" },
-        { r: 9, addr: "meow.mon", cls: "lp", s: "811,442", p: "40.2M", d: "+9.1%" },
+        { r: 9, addr: "0x6aE0…b3F1", cls: "lp", s: "811,442", p: "40.2M", d: "+9.1%" },
         { r: 10, addr: "0x09cE…1024", cls: "val", s: "742,889", p: "36.8M", d: "+1.2%" },
         { r: 11, addr: "0x8888…9999", cls: "staker", s: "700,114", p: "34.5M", d: "+4.0%" },
         { r: 12, addr: "0xDEAD…BEEF", cls: "lp", s: "612,302", p: "30.1M", d: "+11.2%" },
@@ -647,6 +649,18 @@ export default function ShmonadPage() {
         </div>
       </header>
 
+      {/* Page-level stats strip — reads as a distinct section below the
+          nav, with breathing room above and no connecting hairline.
+          Hidden on the RPC and Degen pages where the page-specific
+          layout takes over. */}
+      <div className={`${(activeRoute.startsWith("#/rpc") || activeRoute.startsWith("#/degen") || activeRoute.startsWith("#/points")) ? "hidden" : "hidden md:block"} mt-10 lg:mt-[144px]`}>
+        <div className="max-w-[1480px] mx-auto px-6 lg:px-8 flex items-start justify-center gap-24 lg:gap-32 mono text-[15px]">
+          <div className="flex flex-col items-center gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>TVL</span> <span className="tnum text-bone font-bold text-[32px] leading-none">430M MON</span></div>
+          <div className="flex flex-col items-center gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>APY</span> <span className="tnum text-bone font-bold text-[32px] leading-none">20.54%</span></div>
+          <div className="flex flex-col items-center gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>HOLDERS</span> <span className="tnum text-bone font-bold text-[32px] leading-none">2,968</span></div>
+        </div>
+      </div>
+
       {/* PAGE: STAKE */}
       <main id="page-stake" className="page">
         <div className="max-w-[1480px] mx-auto px-6 lg:px-8 py-10 lg:py-14">
@@ -787,7 +801,7 @@ export default function ShmonadPage() {
                         Exchange rate
                         <span className="inline-flex w-3.5 h-3.5 rounded-full border border-hair2 items-center justify-center text-[9px] text-mute2 leading-none cursor-help" title="Conversion rate between MON and shMON at current epoch.">i</span>
                       </dt>
-                      <dd className="tnum">1 {depositToken} = 0.9423 shMON</dd>
+                      <dd className="tnum">1 {depositToken} = 0.6412 shMON</dd>
                     </div>
                     <div className="flex justify-between py-2">
                       <dt className="text-mute flex items-center gap-1.5">
@@ -875,22 +889,68 @@ export default function ShmonadPage() {
                     </div>
                   </div>
 
-                  <dl className="mt-7 mono text-[12.5px]">
-                    <div className="flex justify-between py-2 hairline-b">
-                      <dt className="text-mute flex items-center gap-1.5">
-                        Exchange rate
-                        <span className="inline-flex w-3.5 h-3.5 rounded-full border border-hair2 items-center justify-center text-[9px] text-mute2 leading-none cursor-help" title="Redemption rate from shMON back to MON at current epoch.">i</span>
-                      </dt>
-                      <dd className="tnum">1 shMON = 1.0598 MON</dd>
+                  {/* Choose unstake option — Use shMON vs Use Pool. */}
+                  <div className="mt-7 border border-hair2 bg-ink2">
+                    <div className="hairline-b flex items-center px-5 h-[44px]">
+                      <span className="mono-up text-mute">Choose unstake option</span>
                     </div>
-                    <div className="flex justify-between py-2">
-                      <dt className="text-mute flex items-center gap-1.5">
-                        Unbond period
-                        <span className="inline-flex w-3.5 h-3.5 rounded-full border border-hair2 items-center justify-center text-[9px] text-mute2 leading-none cursor-help" title="Time before unstaked MON is available to withdraw.">i</span>
-                      </dt>
-                      <dd className="tnum" style={{ color: "#9a78ff" }}>Instant · ≈ 0.6s</dd>
+                    <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div
+                        onClick={() => setUnstakeOption("epoch")}
+                        className="border border-hair2 p-5 transition hover:bg-ink3 cursor-pointer"
+                        style={
+                          unstakeOption === "epoch"
+                            ? { borderColor: "#9a78ff" }
+                            : undefined
+                        }
+                      >
+                        <div className="text-[15px] font-medium text-bone mb-4">Epoch Unstake</div>
+                        <dl className="mono text-[12.5px] space-y-2.5">
+                          <div className="flex justify-between">
+                            <dt className="text-mute">Rate</dt>
+                            <dd className="tnum text-bone">1 : 1.5593</dd>
+                          </div>
+                          <div className="flex justify-between">
+                            <dt className="text-mute">Wait time</dt>
+                            <dd className="tnum text-bone">~1 day</dd>
+                          </div>
+                          <div className="flex justify-between hairline-t pt-2.5">
+                            <dt className="text-mute">You receive</dt>
+                            <dd className="tnum text-bone font-medium">155.92991 MON</dd>
+                          </div>
+                        </dl>
+                      </div>
+                      <div
+                        onClick={() => setUnstakeOption("instant")}
+                        className="border border-hair2 p-5 transition hover:bg-ink3 cursor-pointer"
+                        style={
+                          unstakeOption === "instant"
+                            ? { borderColor: "#9a78ff" }
+                            : undefined
+                        }
+                      >
+                        <div className="text-[15px] font-medium text-bone mb-4">Instant Unstake</div>
+                        <dl className="mono text-[12.5px] space-y-2.5">
+                          <div className="flex justify-between">
+                            <dt className="text-mute">Fee</dt>
+                            <dd className="tnum text-bone">1.41597 MON</dd>
+                          </div>
+                          <div className="flex justify-between">
+                            <dt className="text-mute">Rate</dt>
+                            <dd className="tnum text-bone">1 : 1.5451</dd>
+                          </div>
+                          <div className="flex justify-between">
+                            <dt className="text-mute">Wait time</dt>
+                            <dd className="tnum" style={{ color: "#9a78ff" }}>Instant</dd>
+                          </div>
+                          <div className="flex justify-between hairline-t pt-2.5">
+                            <dt className="text-mute">You receive</dt>
+                            <dd className="tnum text-bone font-medium">154.51393 MON</dd>
+                          </div>
+                        </dl>
+                      </div>
                     </div>
-                  </dl>
+                  </div>
 
                   <button
                     type="button"
@@ -1559,7 +1619,7 @@ export default function ShmonadPage() {
 
       {/* PAGE: POINTS */}
       <main id="page-points" className="page">
-        <div className="max-w-[1480px] mx-auto px-6 lg:px-8 py-10 lg:py-14">
+        <div className="max-w-[1480px] mx-auto px-6 lg:px-8 pt-10 lg:pt-[144px] pb-10 lg:pb-14">
           <div className="grid grid-cols-12 gap-6 mb-10">
             <div className="col-span-12 md:col-span-5 border border-hair2 bg-ink2 p-6">
               <div className="mono-up text-mute2 mb-4">Your points</div>
@@ -1577,7 +1637,7 @@ export default function ShmonadPage() {
               <div className="mono-up text-mute2 mb-4">Active boosts</div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-px bg-hair2">
                 {[
-                  { v: "2.5×", l: "Early staker · pre-season" },
+                  { v: "2.5×", l: "shMON holder" },
                   { v: "3.0×", l: "shMON LP in any pool" },
                   { v: "1.5×", l: "Fastlane RPC commit" },
                   { v: "2.0×", l: "Validator · sub-200ms" },
@@ -1827,21 +1887,95 @@ export default function ShmonadPage() {
                 </div>
               )}
             </div>
+
+            {/* Duplicate of the Stake page's "Your position" card. */}
+            <div className="mt-12 border border-hair2 bg-ink2">
+              {walletConnected ? (
+                <button
+                  type="button"
+                  aria-expanded={degenPositionOpen}
+                  aria-controls="position-body-degen"
+                  aria-label={degenPositionOpen ? "Collapse your position" : "Expand your position"}
+                  onClick={() => setDegenPositionOpen((v) => !v)}
+                  className={`w-full flex items-center justify-between px-5 h-[44px] text-left transition hover:bg-ink3 ${
+                    degenPositionOpen ? "hairline-b" : ""
+                  }`}
+                >
+                  <span className="mono-up text-mute">Your position</span>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                    aria-hidden="true"
+                    className="text-mute2 flex-shrink-0"
+                    style={{
+                      transform: degenPositionOpen ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 200ms ease",
+                    }}
+                  >
+                    <path d="M3 5 L7 9 L11 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="square" strokeLinejoin="miter" />
+                  </svg>
+                </button>
+              ) : (
+                <div className="hairline-b flex items-center px-5 h-[44px]">
+                  <span className="mono-up text-mute">Your position</span>
+                </div>
+              )}
+              {walletConnected ? (
+                <div id="position-body-degen" className={`p-6 ${degenPositionOpen ? "" : "hidden"}`}>
+                  <div className="flex items-baseline gap-2">
+                    <span className="tnum text-[42px] font-light tracking-tight leading-none">423.7872</span>
+                    <span className="text-mute2 text-[15px]">MON</span>
+                  </div>
+                  <div className="mono text-[12px] text-mute2 mt-2">≈ $12.29</div>
+
+                  <div className="mt-6 pt-6 hairline-t grid grid-cols-2 gap-y-5">
+                    <div>
+                      <div className="mono-up text-mute mb-1.5" style={{ fontSize: 12 }}>Since</div>
+                      <div className="tnum text-[16px] text-bone">42d</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-6 hairline-t">
+                    <div className="mono-up text-mute text-[10px] mb-2.5">Next epoch</div>
+                    <div className="h-1 bg-hair2 overflow-hidden">
+                      <div className="h-full bg-lime" style={{ width: "62%" }} />
+                    </div>
+                    <div className="mono text-[11.5px] text-mute2 mt-2.5">17h 22m · #413</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-6 flex items-center gap-5">
+                  {/* Connect-wallet icon — line-art wallet glyph at 48×48 matching the editorial style */}
+                  <span className="w-12 h-12 flex items-center justify-center text-mute2 flex-shrink-0">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                      {/* Wallet body */}
+                      <rect x="5.5" y="14" width="37" height="25" stroke="currentColor" strokeWidth="1.4" />
+                      {/* Top fold/flap */}
+                      <path d="M5.5 14 L34 14 L34 8.5 L5.5 8.5 Z" fill="currentColor" />
+                      {/* Card slot / chip */}
+                      <circle cx="34" cy="26.5" r="2.4" fill="currentColor" />
+                      {/* Connection plug — small horizontal stem extending from the right edge */}
+                      <path d="M42.5 26.5 L46.5 26.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                      <path d="M46.5 23.5 L46.5 29.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" />
+                    </svg>
+                  </span>
+                  <div className="mono text-[12px] text-mute2 leading-relaxed">
+                    Connect a wallet to view your shMON balance, accrued yield, and active boost multipliers.
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </main>
 
       {/* FOOTER */}
-      <footer className="hairline-t mt-[27rem]">
+      <footer className="mt-[27rem]">
         <div className="max-w-[1480px] mx-auto px-6 lg:px-8">
           <div className="footer-canvas-wrap relative pt-8">
             <MatrixCanvas words={SHMONAD_MATRIX_WORDS} font="grotesk" />
-            <div
-              className="absolute top-12 left-0 mono-up text-mute"
-              style={{ pointerEvents: "none" }}
-            >
-              FIG · RESOLVE
-            </div>
           </div>
 
           <div className="py-8 flex flex-wrap items-center justify-between gap-4 hairline-t">

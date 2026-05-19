@@ -43,7 +43,7 @@ export const metadata: Metadata = {
 };
 
 // Runs before React hydration to prevent flash of wrong theme.
-const themeInit = `(function(){try{var t=localStorage.getItem('fl-theme');if(t!=='light'&&t!=='dark')t='light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();`;
+const themeInit = `(function(){try{var t=localStorage.getItem('fl-theme');if(t!=='light'&&t!=='dark')t='dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`;
 
 export default function RootLayout({
   children,
@@ -63,7 +63,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      data-theme="light"
+      data-theme="dark"
       data-display={displayFace}
       className={`${newsreader.variable} ${geist.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable}`}
       suppressHydrationWarning
