@@ -27,16 +27,16 @@ export default function YieldEngine() {
       <div className="max-w-[1320px] mx-auto px-8">
         {/* ── Header ── */}
         <div
-          className="grid grid-cols-12 gap-10 items-start pb-9"
+          className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 items-start pb-9"
           style={{ borderBottom: "1px solid var(--rule)" }}
         >
-          <h2 className="serif-disp text-[clamp(36px,4.6vw,72px)] text-balance col-span-12 md:col-span-7">
+          <h2 className="serif-disp text-[clamp(36px,4.6vw,72px)] text-balance md:col-span-7">
             Turning Network Flow
             <br />
             <span style={{ color: "var(--ink-4)" }}>Into Sustainable Yield</span>
           </h2>
           <p
-            className="col-span-12 md:col-span-4 md:col-start-9 text-[14.5px] text-pretty"
+            className="md:col-span-4 md:col-start-9 text-[14.5px] text-pretty"
             style={{ color: "var(--ink-3)", lineHeight: 1.6 }}
           >
             shMonad bundles staking, MEV, app services, and infra fees into one
@@ -45,10 +45,10 @@ export default function YieldEngine() {
         </div>
 
         {/* ── Top cards ── */}
-        <div className="grid grid-cols-12 gap-6 mt-10">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-10">
           {/* Validators */}
           <div
-            className="col-span-12 md:col-span-5 flex flex-col"
+            className="md:col-span-5 flex flex-col"
             style={{
               border: "1px solid var(--rule)",
               background: "var(--bg)",
@@ -107,7 +107,7 @@ export default function YieldEngine() {
 
           {/* Apps integrated */}
           <div
-            className="col-span-12 md:col-span-7 flex flex-col items-center justify-center"
+            className="md:col-span-7 flex flex-col items-center justify-center"
             style={{
               border: "1px solid var(--rule)",
               background: "var(--bg)",

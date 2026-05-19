@@ -4,8 +4,8 @@ export default function Footer() {
   return (
     <footer data-screen-label="Footer">
       <div className="max-w-[1320px] mx-auto px-8 py-16">
-        <div className="grid grid-cols-12 gap-10">
-          <div className="col-span-12 md:col-span-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
+          <div className="md:col-span-4">
             <div className="flex items-center gap-3">
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
                 <path
@@ -40,7 +40,7 @@ export default function Footer() {
             </div>
           </div>
 
-          <div className="col-span-12 md:col-span-8 grid grid-cols-2 md:grid-cols-5 gap-10">
+          <div className="md:col-span-8 grid grid-cols-2 md:grid-cols-5 gap-10">
             <div className="foot-col">
               <h5>Products</h5>
               <a href="#">Atlas</a>

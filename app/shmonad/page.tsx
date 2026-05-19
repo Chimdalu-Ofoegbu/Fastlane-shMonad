@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import ThemeToggle from "@/components/client/ThemeToggle";
 import MatrixCanvas from "@/components/client/MatrixCanvas";
+import ShmonadBottomNav from "@/components/client/ShmonadBottomNav";
 import "./shmonad.css";
 
 const SHMONAD_MATRIX_WORDS = ["STAKE", "shMON"];
@@ -164,6 +165,7 @@ export default function ShmonadPage() {
         rpc: "Fastlane RPC",
         points: "Points",
         degen: "Degen Pool",
+        activity: "Activity",
         ecosystem: "Ecosystem",
       };
       document.title = "shMonad — " + (title[hash] || "Stake");
@@ -533,7 +535,7 @@ export default function ShmonadPage() {
   }, []);
 
   return (
-    <div className="shmonad-root">
+    <div className="shmonad-root pb-[88px] md:pb-0">
       {/* TOP CHROME */}
       <header className="sticky top-0 z-50 bg-ink/90 backdrop-blur-md hairline-b">
         <div className="max-w-[1480px] mx-auto px-6 lg:px-8 h-[60px] flex items-center justify-between">
@@ -691,7 +693,7 @@ export default function ShmonadPage() {
                     <span className="text-bone2 tnum text-[13.2px]" id="balMON">1,284.5102 {depositToken}</span>
                   </div>
                   <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] relative">
-                    <input id="stakeIn" type="text" inputMode="decimal" defaultValue="500.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
+                    <input id="stakeIn" type="text" inputMode="decimal" defaultValue="500.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[32px] md:text-[42px] tnum font-light tracking-tight" />
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button id="maxBtn" className="mono text-[10.5px] text-bone border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition">MAX</button>
                       {/* Token selector — opens a small dropdown menu of choices. */}
@@ -783,7 +785,7 @@ export default function ShmonadPage() {
                     <span className="text-bone2 tnum text-[13.2px]">0.0000 shMON</span>
                   </div>
                   <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] overflow-hidden">
-                    <span id="stakeOut" className="flex-1 min-w-0 text-[42px] tnum font-light tracking-tight truncate">471.1500</span>
+                    <span id="stakeOut" className="flex-1 min-w-0 text-[32px] md:text-[42px] tnum font-light tracking-tight truncate">471.1500</span>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {/* Round placeholder holding the shMON token icon */}
                       <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -844,7 +846,7 @@ export default function ShmonadPage() {
                     <span className="text-bone2 tnum text-[13.2px]">8,422.18 shMON</span>
                   </div>
                   <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] relative">
-                    <input id="unstakeIn" type="text" inputMode="decimal" defaultValue="0.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
+                    <input id="unstakeIn" type="text" inputMode="decimal" defaultValue="0.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[32px] md:text-[42px] tnum font-light tracking-tight" />
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button id="unstakeMaxBtn" className="mono text-[10.5px] text-bone border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition">MAX</button>
                       <div className="flex items-center gap-2 ml-1">
@@ -879,7 +881,7 @@ export default function ShmonadPage() {
                     <span className="text-bone2 tnum text-[13.2px]">1,284.5102 MON</span>
                   </div>
                   <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] overflow-hidden">
-                    <span id="unstakeOut" className="flex-1 min-w-0 text-[42px] tnum font-light tracking-tight truncate">0.00</span>
+                    <span id="unstakeOut" className="flex-1 min-w-0 text-[32px] md:text-[42px] tnum font-light tracking-tight truncate">0.00</span>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1015,7 +1017,7 @@ export default function ShmonadPage() {
                 {walletConnected ? (
                   <div id="position-body" className={`p-6 ${positionOpen ? "" : "hidden"}`}>
                     <div className="flex items-baseline gap-2">
-                      <span className="tnum text-[42px] font-light tracking-tight leading-none">423.7872</span>
+                      <span className="tnum text-[32px] md:text-[42px] font-light tracking-tight leading-none">423.7872</span>
                       <span className="text-mute2 text-[15px]">MON</span>
                     </div>
                     <div className="mono text-[12px] text-mute2 mt-2">≈ $12.29</div>
@@ -1303,9 +1305,9 @@ export default function ShmonadPage() {
               </div>
 
               <div className={`p-7 lg:p-9 ${rpcMode === "commit" ? "" : "hidden"}`}>
-                <div className="mono-up text-mute mb-3 flex justify-between">
+                <div className="mono-up text-mute mb-3 flex justify-between items-center">
                   <span>Enter amount to commit</span>
-                  <span>Available · <span className="text-bone2 tnum">2,841.0091</span></span>
+                  <span className="text-right">Available · <span className="text-bone2 tnum">2,841.0091</span></span>
                 </div>
                 <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px]">
                   <input
@@ -1314,7 +1316,7 @@ export default function ShmonadPage() {
                     inputMode="decimal"
                     defaultValue="250.00"
                     size={1}
-                    className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight"
+                    className="flex-1 min-w-0 bg-transparent outline-none text-[32px] md:text-[42px] tnum font-light tracking-tight"
                     // JSX-level onInput — keeps the receive output in sync
                     // without depending on the useEffect-captured listener.
                     onInput={(e) => {
@@ -1359,7 +1361,7 @@ export default function ShmonadPage() {
                   <span className="text-bone2 tnum text-[13.2px]">0.00 cmt-shMON</span>
                 </div>
                 <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] overflow-hidden">
-                  <span id="rpcReceiveOut" className="flex-1 min-w-0 text-[42px] tnum font-light tracking-tight truncate">250.00</span>
+                  <span id="rpcReceiveOut" className="flex-1 min-w-0 text-[32px] md:text-[42px] tnum font-light tracking-tight truncate">250.00</span>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {/* Committed shMON chip — uses the same shMON icon, since
                         cmt-shMON is just locked shMON. Filled-lime ring around
@@ -1467,7 +1469,7 @@ export default function ShmonadPage() {
                     inputMode="decimal"
                     defaultValue="0.00"
                     size={1}
-                    className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight"
+                    className="flex-1 min-w-0 bg-transparent outline-none text-[32px] md:text-[42px] tnum font-light tracking-tight"
                     onInput={(e) => {
                       const n = parseFloat(((e.target as HTMLInputElement).value || "0").replace(/,/g, "")) || 0;
                       const f = n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1520,7 +1522,7 @@ export default function ShmonadPage() {
                   <span className="text-bone2 tnum text-[13.2px]">0.00 shMON</span>
                 </div>
                 <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] overflow-hidden">
-                  <span id="rpcUncommitOut" className="flex-1 min-w-0 text-[42px] tnum font-light tracking-tight truncate">0.00</span>
+                  <span id="rpcUncommitOut" className="flex-1 min-w-0 text-[32px] md:text-[42px] tnum font-light tracking-tight truncate">0.00</span>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="w-7 h-7 rounded-full bg-ink3 border border-hair2 flex items-center justify-center overflow-hidden flex-shrink-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1740,7 +1742,7 @@ export default function ShmonadPage() {
                   <span className="text-bone2 tnum text-[13.2px]">2,841.0091 MON</span>
                 </div>
                 <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] relative">
-                  <input id="degenIn" type="text" inputMode="decimal" defaultValue="100.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
+                  <input id="degenIn" type="text" inputMode="decimal" defaultValue="100.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[32px] md:text-[42px] tnum font-light tracking-tight" />
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button id="degenMaxBtn" className="mono text-[10.5px] text-bone border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition">MAX</button>
                     <div className="flex items-center gap-2 ml-1">
@@ -1792,7 +1794,7 @@ export default function ShmonadPage() {
                   <span className="text-bone2 tnum text-[13.2px]">1,902.4400 MON</span>
                 </div>
                 <div className="border hair2 bg-ink2 flex items-center gap-4 px-5 h-[78px] relative">
-                  <input id="degenWithdrawIn" type="text" inputMode="decimal" defaultValue="0.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[42px] tnum font-light tracking-tight" />
+                  <input id="degenWithdrawIn" type="text" inputMode="decimal" defaultValue="0.00" size={1} className="flex-1 min-w-0 bg-transparent outline-none text-[32px] md:text-[42px] tnum font-light tracking-tight" />
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button id="degenWithdrawMaxBtn" className="mono text-[10.5px] text-bone border border-lime px-2 py-1 hover:bg-lime hover:text-ink transition">MAX</button>
                     <div className="flex items-center gap-2 ml-1">
@@ -1925,7 +1927,7 @@ export default function ShmonadPage() {
               {walletConnected ? (
                 <div id="position-body-degen" className={`p-6 ${degenPositionOpen ? "" : "hidden"}`}>
                   <div className="flex items-baseline gap-2">
-                    <span className="tnum text-[42px] font-light tracking-tight leading-none">423.7872</span>
+                    <span className="tnum text-[32px] md:text-[42px] font-light tracking-tight leading-none">423.7872</span>
                     <span className="text-mute2 text-[15px]">MON</span>
                   </div>
                   <div className="mono text-[12px] text-mute2 mt-2">≈ $12.29</div>
@@ -1971,6 +1973,75 @@ export default function ShmonadPage() {
         </div>
       </main>
 
+      {/* PAGE: ACTIVITY — standalone history page, mobile only.
+          Reachable via the mobile bottom nav; hidden on desktop (see
+          shmonad.css #page-activity rule) where no nav entry exists. */}
+      <main id="page-activity" className="page">
+        <div className="max-w-[1480px] mx-auto px-6 lg:px-8 pt-[72px] pb-10">
+          <div className="max-w-[700px] mx-auto">
+            <div className="mb-7">
+              <div className="mono-up text-mute mb-2">Account</div>
+              <h1 className="serif text-[34px] leading-none text-bone">Activity</h1>
+              <p className="mono text-[12px] text-mute2 mt-3 leading-relaxed">
+                Your staking history, reward claims, and boost activity.
+              </p>
+            </div>
+
+            <div className="border border-hair2 bg-ink2">
+              <div className="hairline-b flex items-center justify-between px-5 h-[44px]">
+                <span className="mono-up text-mute">All activity</span>
+                {walletConnected && (
+                  <span className="mono text-[11px] text-mute2">
+                    {ACTIVITY.length} events
+                  </span>
+                )}
+              </div>
+              {walletConnected ? (
+                <div>
+                  {ACTIVITY.map((a, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between gap-4 px-5 py-3.5 hairline-b"
+                    >
+                      <div>
+                        <span
+                          className="inline-flex mono-up text-bone2 border border-hair2 px-2 py-1"
+                          style={{ fontSize: 10 }}
+                        >
+                          {a.type}
+                        </span>
+                        <div className="mono text-[11px] text-mute mt-1.5">{a.date}</div>
+                      </div>
+                      <div className="text-right">
+                        <div
+                          className="tnum text-[13px]"
+                          style={{ color: a.amount === "—" ? "var(--sh-mute2)" : "#9a78ff" }}
+                        >
+                          {a.amount}
+                        </div>
+                        <div className="mono text-[11px] text-mute2 mt-1.5">{a.tx}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 flex items-center gap-5">
+                  <span className="w-12 h-12 flex items-center justify-center text-mute2 flex-shrink-0">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                      <circle cx="24" cy="24" r="16" stroke="currentColor" strokeWidth="1.4" />
+                      <path d="M24 14 L24 24 L31.5 28" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" strokeLinejoin="miter" />
+                    </svg>
+                  </span>
+                  <div className="mono text-[12px] text-mute2 leading-relaxed">
+                    Connect a wallet to view your staking history, reward claims, and boost activity.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+
       {/* FOOTER */}
       <footer className="mt-[27rem]">
         <div className="max-w-[1480px] mx-auto px-6 lg:px-8">
@@ -2001,6 +2072,10 @@ export default function ShmonadPage() {
           </div>
         </div>
       </footer>
+
+      {/* Mobile bottom navigation — sticky, hidden on md+ where the top nav shows.
+          Active item is driven by the hash router via [data-nav] (see route()). */}
+      <ShmonadBottomNav />
     </div>
   );
 }

@@ -566,7 +566,7 @@ a.ilink:hover { border-color: var(--signal); }
 .metric-val {
   font-family: var(--font-newsreader), serif;
   font-weight: 300;
-  font-size: 56px;
+  font-size: clamp(28px, 7.5vw, 56px);
   line-height: 1;
   letter-spacing: -0.02em;
 }

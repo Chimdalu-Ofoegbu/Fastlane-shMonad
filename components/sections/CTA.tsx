@@ -5,8 +5,8 @@ export default function CTA() {
       className="py-32"
       style={{ borderBottom: "1px solid var(--rule)" }}
     >
-      <div className="max-w-[1320px] mx-auto px-8 grid grid-cols-12 gap-10 items-end">
-        <div className="col-span-12 md:col-span-8">
+      <div className="max-w-[1320px] mx-auto px-8 grid grid-cols-1 md:grid-cols-12 gap-10 items-end">
+        <div className="md:col-span-8">
           <h2
             className="display text-balance"
             style={{ fontSize: "clamp(48px, 7.4vw, 120px)" }}
@@ -18,7 +18,7 @@ export default function CTA() {
             primitive.
           </h2>
         </div>
-        <div className="col-span-12 md:col-span-4">
+        <div className="md:col-span-4">
           <p
             className="text-[15px] text-pretty mb-7"
             style={{ color: "var(--ink-2)", lineHeight: 1.6 }}

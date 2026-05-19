@@ -61,8 +61,8 @@ export default function Hero() {
           <span style={{ color: "var(--signal)", fontWeight: 600, fontStyle: "normal" }}>of Monad</span>
         </h1>
 
-        <div className="grid grid-cols-12 gap-10 items-start">
-          <div className="col-span-12 md:col-span-6 lg:col-span-5 lg:mt-10">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 items-start">
+          <div className="md:col-span-6 lg:col-span-5 lg:mt-10">
             <p
               className="text-pretty text-[18px]"
               style={{ color: "var(--ink-2)", lineHeight: 1.55 }}
@@ -84,7 +84,7 @@ export default function Hero() {
           </div>
 
           <div
-            className="col-span-12 md:col-span-6 lg:col-span-6 lg:col-start-7 flex items-center justify-center"
+            className="md:col-span-6 lg:col-span-6 lg:col-start-7 flex items-center justify-center"
             style={{ marginTop: "clamp(-80px, -6vw, -24px)" }}
           >
             <TiltImage
@@ -105,7 +105,7 @@ export default function Hero() {
           <div className="p-7" style={{ borderRight: "1px solid var(--rule)" }}>
             <div
               className="metric-val ticker"
-              style={{ whiteSpace: "nowrap", fontSize: "clamp(36px, 4.2vw, 52px)" }}
+              style={{ fontSize: "clamp(28px, 7.5vw, 52px)" }}
             >
               430m Mon
             </div>

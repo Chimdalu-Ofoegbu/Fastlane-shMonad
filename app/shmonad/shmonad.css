@@ -199,6 +199,38 @@
 .shmonad-root .nav-link.active { color: var(--sh-bone); }
 .shmonad-root .nav-link.active::after { background: var(--sh-lime); }
 
+/* ─────────────────────────────────────────────
+   Mobile bottom navigation — the active item is the routed page.
+   `.active` is toggled on each [data-nav] anchor by the hash router,
+   so the highlight stays correct on load, reload, and navigation.
+   ───────────────────────────────────────────── */
+.shmonad-root .sh-bnav-icon {
+  width: 24px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: var(--sh-mute2);
+}
+.shmonad-root .sh-bnav-label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--sh-mute2);
+}
+.shmonad-root .sh-bnav-item.active .sh-bnav-icon {
+  width: 52px;
+  height: 52px;
+  margin-top: -26px;
+  border-radius: 999px;
+  background: var(--sh-lime);
+  color: var(--sh-lime-fg);
+  box-shadow: 0 0 0 5px var(--sh-ink), 0 8px 18px -6px rgba(97, 5, 255, 0.7);
+}
+.shmonad-root .sh-bnav-item.active .sh-bnav-label {
+  color: var(--sh-bone);
+}
+
 /* Marquee (defined for parity, not currently used in page) */
 @keyframes sh-marquee {
   from { transform: translateX(0); }
@@ -211,6 +243,11 @@
 .shmonad-root .page.active {
   display: block;
   animation: sh-pageIn 0.35s ease both;
+}
+/* Activity is a mobile-only page — never shown on desktop, even if the
+   #/activity hash is hit directly (the ID selector outranks .page.active). */
+@media (min-width: 768px) {
+  .shmonad-root #page-activity.active { display: none; }
 }
 @keyframes sh-pageIn {
   from { opacity: 0; transform: translateY(6px); }

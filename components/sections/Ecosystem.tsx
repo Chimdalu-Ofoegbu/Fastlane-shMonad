@@ -109,11 +109,11 @@ export default function Ecosystem() {
           </div>
           <div className="p-7 col-span-2 md:col-span-4">
             <div
-              className="grid grid-cols-12 gap-6 items-center text-[14px]"
+              className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center text-[14px]"
               style={{ color: "var(--ink-2)" }}
             >
               <div
-                className="col-span-12 md:col-span-4 text-pretty"
+                className="md:col-span-4 text-pretty"
                 style={{ color: "var(--ink-3)" }}
               >
                 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
@@ -121,7 +121,7 @@ export default function Ecosystem() {
               </div>
               <a
                 href="#"
-                className="cta-slide col-span-12 md:col-span-3 md:col-start-10"
+                className="cta-slide md:col-span-3 md:col-start-10"
               >
                 <span className="dot" />
                 <span className="slot">
