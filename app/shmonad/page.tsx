@@ -655,11 +655,11 @@ export default function ShmonadPage() {
           nav, with breathing room above and no connecting hairline.
           Hidden on the RPC and Degen pages where the page-specific
           layout takes over. */}
-      <div className={`${(activeRoute.startsWith("#/rpc") || activeRoute.startsWith("#/degen") || activeRoute.startsWith("#/points")) ? "hidden" : "hidden md:block"} mt-10 lg:mt-[144px]`}>
-        <div className="max-w-[1480px] mx-auto px-6 lg:px-8 flex items-start justify-center gap-24 lg:gap-32 mono text-[15px]">
-          <div className="flex flex-col items-center gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>TVL</span> <span className="tnum text-bone font-bold text-[32px] leading-none">430M MON</span></div>
-          <div className="flex flex-col items-center gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>APY</span> <span className="tnum text-bone font-bold text-[32px] leading-none">20.54%</span></div>
-          <div className="flex flex-col items-center gap-1"><span className="mono-up text-mute2" style={{ fontSize: 16 }}>HOLDERS</span> <span className="tnum text-bone font-bold text-[32px] leading-none">2,968</span></div>
+      <div className={`${(activeRoute.startsWith("#/rpc") || activeRoute.startsWith("#/degen") || activeRoute.startsWith("#/points") || activeRoute.startsWith("#/activity")) ? "hidden" : "block"} mt-10 lg:mt-[144px]`}>
+        <div className="max-w-[1480px] mx-auto px-6 lg:px-8 flex items-start justify-center gap-8 md:gap-24 lg:gap-32 mono text-[15px]">
+          <div className="flex flex-col items-center gap-1"><span className="mono-up text-mute2 text-[11px] md:text-[16px]">TVL</span> <span className="tnum text-bone font-bold text-[18px] md:text-[32px] leading-none">430M MON</span></div>
+          <div className="flex flex-col items-center gap-1"><span className="mono-up text-mute2 text-[11px] md:text-[16px]">APY</span> <span className="tnum text-bone font-bold text-[18px] md:text-[32px] leading-none">20.54%</span></div>
+          <div className="flex flex-col items-center gap-1"><span className="mono-up text-mute2 text-[11px] md:text-[16px]">HOLDERS</span> <span className="tnum text-bone font-bold text-[18px] md:text-[32px] leading-none">2,968</span></div>
         </div>
       </div>
 
